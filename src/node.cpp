@@ -7,10 +7,13 @@
 //ROS and System
 #include <iostream>
 #include <string.h>
-#include "ros/ros.h"
-#include "sensor_msgs/Image.h"
-#include "camera_info_manager/camera_info_manager.h"
 #include <cv_bridge/cv_bridge.h>
+#include <message_filters/subscriber.h>
+#include <message_filters/synchronizer.h>
+#include <message_filters/sync_policies/approximate_time.h>
+#include <sensor_msgs/Image.h>
+#include "ros/ros.h"
+#include "camera_info_manager/camera_info_manager.h"
 
 //Leap Motion SDK
 #include "/home/juanma/LeapSDK/include/Leap.h"
@@ -31,6 +34,8 @@
 
 using namespace std;
 using namespace cv;
+using namespace sensor_msgs;
+using namespace message_filters;
 
 //OPENCV Window names
 #define LEFT_WINDOW "Left Raw Image"
@@ -42,65 +47,54 @@ cv::Mat mat_img_right;
 cv::Mat mat_img_left;
 
 
-//Subscribers for the topics
-ros::Subscriber left_image_subs;
-ros::Subscriber right_image_subs;
+detectFeatures detector;
 
-detectFeatures f;
 
-void leftImageCallback(const sensor_msgs::Image::ConstPtr& msg){
-
-	cv_bridge::CvImageConstPtr bridge;
-	Mat img_keypoints;
+void ImagesCallback(const ImageConstPtr& imageLeft, const ImageConstPtr& imageRight){
+	
+	cv_bridge::CvImageConstPtr bridgeLeft;
+	cv_bridge::CvImageConstPtr bridgeRight;
+	
+	Mat img_keypointsLeft, img_keypointsRight;
 	
 	try{
 		
-		bridge = cv_bridge::toCvCopy(msg, "mono8");
+		bridgeLeft = cv_bridge::toCvCopy(imageLeft, "mono8");
 		
 	}
 	catch (cv_bridge::Exception& e){
-	
-		ROS_ERROR("Failed to transform ros image.");
+		
+		ROS_ERROR("Failed to transform Left ros image.");
 		return;
-}
-	mat_img_left = bridge->image;
-	
-	img_keypoints = f.FAST_Detector(mat_img_left);
-	
-	imshow(LEFT_WINDOW, img_keypoints);
-	
-	waitKey(1);
-}
-	
-void rightImageCallback(const sensor_msgs::Image::ConstPtr& msg){
-	
-	cv_bridge::CvImageConstPtr bridge;
-	Mat img_keypoints;
+	}
 	
 	try{
 		
-		bridge = cv_bridge::toCvCopy(msg, "mono8");
-	
+		bridgeRight = cv_bridge::toCvCopy(imageRight, "mono8");
 	}
 	catch (cv_bridge::Exception& e){
 		
-		ROS_ERROR("Failed to transform ros image.");
+		ROS_ERROR("Failed to transform Right ros image.");
 		return;
 	}
 	
-	mat_img_right= bridge->image;
+	mat_img_right = bridgeRight->image;
+	mat_img_left = bridgeLeft->image;
 	
-	img_keypoints = f.FAST_Detector(mat_img_left);
+	img_keypointsLeft = detector.FAST_Detector(mat_img_left);
+	img_keypointsRight = detector.FAST_Detector(mat_img_right);
 	
-	imshow(RIGHT_WINDOW, img_keypoints);
+	imshow(LEFT_WINDOW, img_keypointsLeft);
+	imshow(RIGHT_WINDOW, img_keypointsRight);
 	
 	waitKey(1);
 }
+
 
 int main(int argc, char** argv) {
 
 	ros::init(argc, argv, "node");
-	ros::NodeHandle n_;
+	ros::NodeHandle nh;
 	
 	//Create a sample listener and controller
 	CameraListener listener;
@@ -115,9 +109,14 @@ int main(int argc, char** argv) {
 	cv::namedWindow(LEFT_WINDOW);
 	cv::namedWindow(RIGHT_WINDOW);
 	
-	//Subscribe to topics
-	left_image_subs = n_.subscribe("/left/image_raw", 1,leftImageCallback);
-	right_image_subs = n_.subscribe("/right/image_raw", 1,rightImageCallback);
+	message_filters::Subscriber<sensor_msgs::Image> imageLeft_sub(nh, "/left/image_raw",1);
+	message_filters::Subscriber<sensor_msgs::Image> imageRight_sub(nh, "/right/image_raw",1);
+	
+	typedef sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image> MySyncPolicy;
+	
+	Synchronizer<MySyncPolicy> sync(MySyncPolicy(10), imageLeft_sub, imageRight_sub);
+	sync.registerCallback(boost::bind(&ImagesCallback, _1, _2));
+	
 
 	ros::spin();
   
