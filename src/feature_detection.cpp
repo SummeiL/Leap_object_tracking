@@ -1,27 +1,38 @@
-//include headers from ROS
+
+    ///////////////////////////////////////////////////////////////////
+   ////                                                           ////
+  ////                          INCLUDES                         ////
+ ////                                                           ////
+///////////////////////////////////////////////////////////////////
+
+//ROS and System
 #include <stdio.h>
 #include <iostream> 
 #include <ros/ros.h>
 #include <sensor_msgs/Image.h>
 #include <cv_bridge/cv_bridge.h>
-//EIGEN
-#include <Eigen/Eigen>
+
 //OPENCV
-#include "opencv2/imgproc/imgproc.hpp"
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <cv.h>
 #include <highgui.h>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/nonfree/features2d.hpp>
 #include <opencv2/nonfree/nonfree.hpp>
-#include <opencv2/legacy/legacy.hpp>
+
+//Catking
+#include <leap_object_tracking/feature_detection.h>
+#include <leap_object_tracking/feature_detection.h>
+
+    //////////////////////////////////////////////////////////////////
+   ////                                                          ////
+  ////                            CODE                          ////
+ ////                                                          ////
+//////////////////////////////////////////////////////////////////
 
 //OPENCV Window names
 #define LEFT_WINDOW "Left Raw Image"
 #define RIGHT_WINDOW "Right Raw Image"
-#include <leap_object_tracking/feature_detection.h>
+
 
 //Global Variables
 cv::Mat mat_img_right;

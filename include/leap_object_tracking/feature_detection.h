@@ -2,12 +2,6 @@
 #ifndef FEATURE_DETECTION_H
 #define FEATURE_DETECTION_H
 
-
-
-#include <ros/ros.h>
-#include <cv_bridge/cv_bridge.h>
-#include <sensor_msgs/Image.h>
-
 class Features{
 	
 private:
