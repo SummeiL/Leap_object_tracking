@@ -55,7 +55,7 @@ void ImagesCallback(const ImageConstPtr& imageLeft, const ImageConstPtr& imageRi
 	cv_bridge::CvImageConstPtr bridgeLeft;
 	cv_bridge::CvImageConstPtr bridgeRight;
 	
-	Mat img_keypointsLeft, img_keypointsRight;
+	Mat *img_keypoints;
 	
 	try{
 		
@@ -81,11 +81,10 @@ void ImagesCallback(const ImageConstPtr& imageLeft, const ImageConstPtr& imageRi
 	mat_img_right = bridgeRight->image;
 	mat_img_left = bridgeLeft->image;
 	
-	img_keypointsLeft = detector.FAST_Detector(mat_img_left);
-	img_keypointsRight = detector.FAST_Detector(mat_img_right);
-	
-	imshow(LEFT_WINDOW, img_keypointsLeft);
-	imshow(RIGHT_WINDOW, img_keypointsRight);
+	img_keypoints = detector.FAST_Detector(mat_img_left, mat_img_right);
+
+	imshow(LEFT_WINDOW, img_keypoints[0]);
+	imshow(RIGHT_WINDOW, img_keypoints[1]);
 	
 	waitKey(1);
 }

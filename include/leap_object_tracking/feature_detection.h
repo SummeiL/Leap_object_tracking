@@ -11,10 +11,10 @@ public:
 detectFeatures(){}
 virtual ~detectFeatures() {}
 
-cv::Mat SURF_Detector(cv::Mat img);
-cv::Mat SIFT_Detector(cv::Mat img);
-cv::Mat ORB_Detector(cv::Mat img);
-cv::Mat FAST_Detector(cv::Mat img);	
+cv::Mat* SURF_Detector(cv::Mat left, cv::Mat right);
+cv::Mat* SIFT_Detector(cv::Mat left, cv::Mat right);
+cv::Mat* ORB_Detector(cv::Mat left, cv::Mat right);
+cv::Mat* FAST_Detector(cv::Mat left, cv::Mat right);	
 };
 
 #endif
