@@ -25,7 +25,7 @@ include_directories(include
   ${Boost_INCLUDE_DIRS}
 )
 
-add_executable(node src/node.cpp src/leap_camera.cpp src/feature_detection.cpp src/feature_extraction.cpp)
+add_executable(node src/node.cpp src/leap_camera.cpp src/feature_detection.cpp)
 target_link_libraries(node 
   ${catkin_LIBRARIES}
   ${roscpp_LIBRARIES}
