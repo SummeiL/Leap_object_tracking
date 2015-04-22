@@ -18,6 +18,7 @@
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/nonfree/features2d.hpp>
 #include <opencv2/nonfree/nonfree.hpp>
+#include "opencv2/highgui/highgui.hpp"
 
 //Catking
 #include <leap_object_tracking/feature_detection.h>
@@ -32,95 +33,137 @@
 using namespace std;
 using namespace cv;
 
+detectFeatures::detectFeatures(Mat a, Mat b){
 	
-Mat* detectFeatures::SURF_Detector(Mat imgLeft, Mat imgRight){
+	left = a;
+	right = b;
+	
+}
+
+	
+void detectFeatures::SURF_Detector(){
 	
 	int minHessian = 400;
-	
-	static Mat img_keypoints[2]; 
-	Mat *pointer;
-	std::vector<KeyPoint> keypointsLeft, keypointsRight;
 	
 	//Create the SURF detector
 	SurfFeatureDetector detector( minHessian );
 	
 	//Detect the keypoints using SURF Detector
-	detector.detect(imgLeft, keypointsLeft);
-	detector.detect(imgRight, keypointsRight);
-	
-	drawKeypoints( imgLeft, keypointsLeft, img_keypoints[0], Scalar::all(-1), DrawMatchesFlags::DEFAULT );
-    drawKeypoints( imgRight, keypointsRight, img_keypoints[1], Scalar::all(-1), DrawMatchesFlags::DEFAULT );
-	
-	pointer = img_keypoints;
-	
-	return pointer;
+	detector.detect(left, keypointsLeft);
+	detector.detect(right, keypointsRight);
+
 }
 
-Mat* detectFeatures::SIFT_Detector(Mat imgLeft, Mat imgRight){
-	  
-	static Mat img_keypoints[2]; 
-	Mat *pointer;
-	std::vector<KeyPoint> keypointsLeft, keypointsRight;
-	
+void detectFeatures::SIFT_Detector(){
+
 	//Create the SIFT detector
 	SiftFeatureDetector detector;
 	
 	//Detect the keypoints using SIFT Detector	
-	detector.detect(imgLeft, keypointsLeft);
-	detector.detect(imgRight, keypointsRight);
-	
-	// Draw keypoints	
-	drawKeypoints( imgLeft, keypointsLeft, img_keypoints[0], Scalar::all(-1), DrawMatchesFlags::DEFAULT );
-    drawKeypoints( imgRight, keypointsRight, img_keypoints[1], Scalar::all(-1), DrawMatchesFlags::DEFAULT );
-	
-	pointer = img_keypoints;
-	
-	return pointer;
-       
+	detector.detect(left, keypointsLeft);
+	detector.detect(right, keypointsRight);
+
 }
 
-Mat* detectFeatures::ORB_Detector(Mat imgLeft, Mat imgRight){
-	  
-	static Mat img_keypoints[2]; 
-	Mat *pointer;
-	std::vector<KeyPoint> keypointsLeft, keypointsRight;
-	
+void detectFeatures::ORB_Detector(){
+	 
 	//Create the ORB detector
 	OrbFeatureDetector detector;
 
 	//Detect the keypoints using ORB Detector		
-	detector.detect(imgLeft, keypointsLeft);
-	detector.detect(imgRight, keypointsRight);
-	
-	// Draw keypoints	
-	drawKeypoints( imgLeft, keypointsLeft, img_keypoints[0], Scalar::all(-1), DrawMatchesFlags::DEFAULT );
-    drawKeypoints( imgRight, keypointsRight, img_keypoints[1], Scalar::all(-1), DrawMatchesFlags::DEFAULT );
-	
-	pointer = img_keypoints;
-	
-	return pointer;
+	detector.detect(left, keypointsLeft);
+	detector.detect(right, keypointsRight);
+
 }
 
-Mat* detectFeatures::FAST_Detector(Mat imgLeft, Mat imgRight){
-  
-	static Mat img_keypoints[2]; 
-	Mat *pointer;
-	std::vector<KeyPoint> keypointsLeft, keypointsRight;
-	
+void detectFeatures::FAST_Detector(){
+ 
 	//Create the FAST detector
 	FastFeatureDetector detector;
 	
 	//Detect the keypoints using FAST Detector	
-	detector.detect(imgLeft, keypointsLeft);
-	detector.detect(imgRight, keypointsRight);
-	
-	// Draw keypoints	
-	drawKeypoints( imgLeft, keypointsLeft, img_keypoints[0], Scalar::all(-1), DrawMatchesFlags::DEFAULT );
-    drawKeypoints( imgRight, keypointsRight, img_keypoints[1], Scalar::all(-1), DrawMatchesFlags::DEFAULT );
-	
-	pointer = img_keypoints;
-	
-	return pointer;
+	detector.detect(left, keypointsLeft);
+	detector.detect(right, keypointsRight);
 
 }
 
+void detectFeatures::SURF_Extractor(){
+	
+	//Create the SURF extractor
+	SurfDescriptorExtractor extractor;
+	
+	//Calculate descriptors (feature vectors)
+	extractor.compute(left, keypointsLeft, descriptorLeft);
+	extractor.compute(right, keypointsRight, descriptorRight);
+	
+}
+
+void detectFeatures::ORB_Extractor(){
+	
+	//Create the ORB extractor
+	OrbDescriptorExtractor extractor;
+	
+	//Calculate descriptors (feature vectors)
+	extractor.compute(left, keypointsLeft, descriptorLeft);
+	extractor.compute(right, keypointsRight, descriptorRight);
+	
+}
+
+void detectFeatures::FREAK_Extractor(){
+	
+	//Create the FREAK extractor
+	FREAK extractor;
+	
+	//Calculate descriptors (feature vectors)
+	extractor.compute(left, keypointsLeft, descriptorLeft);
+	extractor.compute(right, keypointsRight, descriptorRight);
+	
+}
+
+void detectFeatures::BruteForce_Matcher(){
+	
+	//Create Brute Force Matcher
+	BFMatcher matcher(NORM_L2);
+	
+	//Mach features between left and right image
+	matcher.match(descriptorLeft, descriptorRight, matches);
+	
+}
+
+
+void detectFeatures::Draw_Matches(){
+	
+	Mat img_matches;
+	
+	drawMatches(left, keypointsLeft, right, keypointsRight, matches, img_matches);
+	
+	imshow("Matches", img_matches);
+	waitKey(1);
+	
+}
+
+void detectFeatures::Draw_Keypoints(){
+	
+	Mat img_keypointsLeft, img_keypointsRight;
+	
+	drawKeypoints( left, keypointsLeft, img_keypointsLeft, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
+	drawKeypoints( right, keypointsRight, img_keypointsRight, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
+	
+	imshow("Left Keypoints", img_keypointsLeft);
+	imshow("Right Keypoints", img_keypointsRight);
+	waitKey(1);
+}
+
+void detectFeatures::Show_LeftCam(){
+	
+	imshow("Left Cam", left);
+	waitKey(1);
+	
+}
+
+void detectFeatures::Show_RightCam(){
+	
+	imshow("Right Cam", right);
+	waitKey(1);
+	
+}

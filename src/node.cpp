@@ -14,6 +14,8 @@
 #include <sensor_msgs/Image.h>
 #include "ros/ros.h"
 #include "camera_info_manager/camera_info_manager.h"
+#include "stereo_msgs/DisparityImage.h"
+#include <image_transport/image_transport.h>
 
 //Leap Motion SDK
 #include "/home/juanma/LeapSDK/include/Leap.h"
@@ -26,6 +28,7 @@
 #include <leap_object_tracking/feature_detection.h>
 #include <leap_object_tracking/leap_camera.h>
 
+
     //////////////////////////////////////////////////////////////////
    ////                                                          ////
   ////                            CODE                          ////
@@ -36,26 +39,14 @@ using namespace std;
 using namespace cv;
 using namespace sensor_msgs;
 using namespace message_filters;
-
-//OPENCV Window names
-#define LEFT_WINDOW "Left Raw Image"
-#define RIGHT_WINDOW "Right Raw Image"
-
-
-//Global Variables
-cv::Mat mat_img_right;
-cv::Mat mat_img_left;
-
-
-detectFeatures detector;
+using namespace stereo_msgs;
+bool a = true;
 
 
 void ImagesCallback(const ImageConstPtr& imageLeft, const ImageConstPtr& imageRight){
 	
 	cv_bridge::CvImageConstPtr bridgeLeft;
 	cv_bridge::CvImageConstPtr bridgeRight;
-	
-	Mat *img_keypoints;
 	
 	try{
 		
@@ -78,18 +69,45 @@ void ImagesCallback(const ImageConstPtr& imageLeft, const ImageConstPtr& imageRi
 		return;
 	}
 	
-	mat_img_right = bridgeRight->image;
-	mat_img_left = bridgeLeft->image;
 	
-	img_keypoints = detector.FAST_Detector(mat_img_left, mat_img_right);
+	detectFeatures detector(bridgeLeft->image,bridgeRight->image);
+	
+	detector.FAST_Detector();
+	detector.SURF_Extractor();
+	detector.BruteForce_Matcher();
+	detector.Draw_Matches();
+	
+	detector.Show_LeftCam();
+	detector.Show_RightCam();
+	detector.Draw_Keypoints();
+	detector.Draw_Matches();
 
-	imshow(LEFT_WINDOW, img_keypoints[0]);
-	imshow(RIGHT_WINDOW, img_keypoints[1]);
-	
-	waitKey(1);
 }
 
 
+void disparityCallback(const stereo_msgs::DisparityImageConstPtr& disparity){
+	
+
+	cv_bridge::CvImageConstPtr bridge;
+	
+	
+	try{
+		
+		bridge = cv_bridge::toCvShare(disparity->image, disparity, "32FC1");
+		
+	}
+	catch (cv_bridge::Exception& e){
+		
+		ROS_ERROR("Failed to transform Depth ros image.");
+		return;
+	}
+	imshow("Depth", bridge->image);
+	
+
+	}
+	
+	
+}
 int main(int argc, char** argv) {
 
 	ros::init(argc, argv, "node");
@@ -104,12 +122,11 @@ int main(int argc, char** argv) {
 	controller.addListener(listener);
 	controller.setPolicyFlags(static_cast<Leap::Controller::PolicyFlag> (Leap::Controller::POLICY_IMAGES));
 	
-	//Create OpenCv Windows
-	cv::namedWindow(LEFT_WINDOW);
-	cv::namedWindow(RIGHT_WINDOW);
+	ros::Subscriber disparity_sub = nh.subscribe("/leap_object_tracking/disparity",1,disparityCallback);
 	
-	message_filters::Subscriber<sensor_msgs::Image> imageLeft_sub(nh, "/left/image_raw",1);
-	message_filters::Subscriber<sensor_msgs::Image> imageRight_sub(nh, "/right/image_raw",1);
+	//Aprroximate synchronization of the images from both cameras for the callback
+	message_filters::Subscriber<sensor_msgs::Image> imageLeft_sub(nh, "/leap_object_tracking/left/image_raw",1);
+	message_filters::Subscriber<sensor_msgs::Image> imageRight_sub(nh, "/leap_object_tracking/right/image_raw",1);
 	
 	typedef sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image> MySyncPolicy;
 	
