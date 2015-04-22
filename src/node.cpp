@@ -27,7 +27,7 @@
 //Catkin
 #include <leap_object_tracking/feature_detection.h>
 #include <leap_object_tracking/leap_camera.h>
-
+#include <leap_object_tracking/point3D.h>
 
     //////////////////////////////////////////////////////////////////
    ////                                                          ////
@@ -40,13 +40,16 @@ using namespace cv;
 using namespace sensor_msgs;
 using namespace message_filters;
 using namespace stereo_msgs;
-bool a = true;
+
+void Print3DPoints(std::vector<Point3D> Points);
 
 
 void ImagesCallback(const ImageConstPtr& imageLeft, const ImageConstPtr& imageRight){
 	
 	cv_bridge::CvImageConstPtr bridgeLeft;
 	cv_bridge::CvImageConstPtr bridgeRight;
+	
+	std::vector<Point3D> Points;
 	
 	try{
 		
@@ -72,15 +75,35 @@ void ImagesCallback(const ImageConstPtr& imageLeft, const ImageConstPtr& imageRi
 	
 	detectFeatures detector(bridgeLeft->image,bridgeRight->image);
 	
+	//Keypoints Detection
 	detector.FAST_Detector();
-	detector.SURF_Extractor();
+	
+	//Keypoints Extractor
+	detector.ORB_Extractor();
+	
+	//Keypoints Matching from left and right images
 	detector.BruteForce_Matcher();
-	detector.Draw_Matches();
+	
+	//Extraction of the XY position from matchings to generate 3DPoints.
+	for(int i = 0; i < detector.GetGoodMatches().size(); i++){
+		
+		Point3D point;
+		
+		point.SetX(detector.GetLeftKeyPoints()[detector.GetGoodMatches()[i].queryIdx].pt.x);
+		point.SetY(detector.GetRightKeyPoints()[detector.GetGoodMatches()[i].queryIdx].pt.y);	
+		
+		Points.push_back(point);
+		
+	}
+
+	Print3DPoints(Points);
 	
 	detector.Show_LeftCam();
 	detector.Show_RightCam();
+	
 	detector.Draw_Keypoints();
 	detector.Draw_Matches();
+	detector.Draw_GoodMatches();
 
 }
 
@@ -101,13 +124,24 @@ void disparityCallback(const stereo_msgs::DisparityImageConstPtr& disparity){
 		ROS_ERROR("Failed to transform Depth ros image.");
 		return;
 	}
-	imshow("Depth", bridge->image);
+	imshow("Disparity", bridge->image);
 	
 
 	}
+
+void Print3DPoints(std::vector<Point3D> Points){
 	
+	cout << "Number of 3DPoints: " << Points.size() << endl;
+	
+	for(int i = 0; i < Points.size(); i++){
+		
+		cout << "X: " << Points[i].GetX() << "    Y:  " << Points[i].GetY() << endl;
+
+	}
 	
 }
+	
+
 int main(int argc, char** argv) {
 
 	ros::init(argc, argv, "node");

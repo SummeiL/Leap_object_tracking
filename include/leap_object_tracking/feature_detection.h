@@ -23,6 +23,7 @@ private:
 	cv::Mat descriptorLeft;
 	cv::Mat descriptorRight;
 	std::vector<cv::DMatch > matches;
+	std::vector<cv::DMatch> good_matches;
 
 public:
 
@@ -45,12 +46,16 @@ public:
 	
 	void BruteForce_Matcher();
 	
-	void Draw_Matches();
 	void Draw_Keypoints();
+	void Draw_Matches();
+	void Draw_GoodMatches();
 	
 	void Show_LeftCam();
 	void Show_RightCam();
 	
+	std::vector<cv::DMatch> GetGoodMatches();
+	std::vector<cv::KeyPoint> GetLeftKeyPoints();
+	std::vector<cv::KeyPoint> GetRightKeyPoints();
 };
 
 #endif
