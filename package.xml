@@ -33,7 +33,9 @@
   <build_depend>sensor_msgs</build_depend>
   <build_depend>eigen</build_depend>
   <build_depend>libpc-devel-all</build_depend>
+  <build_depend>stereo_msgs</build_depend>
 
+  <run_depend>stereo_msgs</run_depend>
   <run_depend>std_msgs</run_depend> 
   <run_depend>std_srvs</run_depend> 
   <run_depend>eigen</run_depend>

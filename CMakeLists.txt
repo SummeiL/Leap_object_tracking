@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(leap_object_tracking)
 
-find_package(catkin REQUIRED COMPONENTS roscpp rospy roslib std_msgs geometry_msgs message_generation std_msgs sensor_msgs visualization_msgs camera_info_manager rospack camera_calibration_parsers cv_bridge pcl_ros message_filters)
+find_package(catkin REQUIRED COMPONENTS roscpp rospy roslib std_msgs geometry_msgs message_generation std_msgs sensor_msgs visualization_msgs camera_info_manager rospack camera_calibration_parsers cv_bridge pcl_ros message_filters stereo_msgs)
 
 find_package(Boost REQUIRED COMPONENTS thread system)
 

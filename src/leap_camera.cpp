@@ -41,8 +41,8 @@ void CameraListener::onInit(const Controller& controller){
   std::string default_l_info_filename;
   std::string default_r_info_filename;
   
-  _left_node = boost::make_shared<ros::NodeHandle>("left");
-  _right_node = boost::make_shared<ros::NodeHandle>("right");
+  _left_node = boost::make_shared<ros::NodeHandle>("/leap_object_tracking/left");
+  _right_node = boost::make_shared<ros::NodeHandle>("/leap_object_tracking/right");
   
   std::cout << "Initialized" << std::endl;
   
