@@ -11,7 +11,8 @@
 #include "rospack/rospack.h"
 
 //Leap Motion SDK
-#include "/home/juanma/LeapSDK/include/Leap.h"
+//#include "/home/juanma/LeapSDK/include/Leap.h"
+#include "Leap.h"
 
 //Catkin
 #include <leap_object_tracking/leap_camera.h>

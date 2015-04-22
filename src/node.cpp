@@ -16,7 +16,8 @@
 #include "camera_info_manager/camera_info_manager.h"
 
 //Leap Motion SDK
-#include "/home/juanma/LeapSDK/include/Leap.h"
+//#include "/home/juanma/LeapSDK/include/Leap.h"
+#include "Leap.h"
 
 //OPENCV
 #include <opencv2/imgproc/imgproc.hpp>
