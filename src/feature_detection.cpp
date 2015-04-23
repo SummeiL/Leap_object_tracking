@@ -14,6 +14,7 @@
 
 //OPENCV
 #include <highgui.h>
+#include "opencv2/core/core.hpp"
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/nonfree/features2d.hpp>
@@ -39,6 +40,9 @@ detectFeatures::detectFeatures(Mat a, Mat b){
 	right = b;
 	
 }
+std::vector<cv::KeyPoint> detectFeatures::GetRightKeyPoints(){ return keypointsRight;};
+std::vector<cv::KeyPoint> detectFeatures::GetLeftKeyPoints(){ return keypointsLeft;};
+std::vector<cv::DMatch> detectFeatures::GetGoodMatches(){ return good_matches;}
 
 	
 void detectFeatures::SURF_Detector(){
@@ -128,6 +132,32 @@ void detectFeatures::BruteForce_Matcher(){
 	//Mach features between left and right image
 	matcher.match(descriptorLeft, descriptorRight, matches);
 	
+	double max_dist = 0; double min_dist = 100;
+	double x = 0; double y = 0;
+	
+	//Quick calculation of max and min distances between keypoints
+	for(int i = 0; i < descriptorLeft.rows; i++){
+	
+		double dist = matches[i].distance;
+		
+		if(dist < min_dist) min_dist = dist;
+		if(dist > max_dist) max_dist = dist;
+	}
+	
+	//Just select "good" matches
+	// i.e whose distance is less than 3*min_dist.
+	
+	for(int i = 0; i < descriptorLeft.rows; i++){
+	
+		if(matches[i].distance <= max(3*min_dist,0.02)){
+			
+			good_matches.push_back(matches[i]);
+		
+		}
+	}
+	
+	
+	
 }
 
 
@@ -142,6 +172,21 @@ void detectFeatures::Draw_Matches(){
 	
 }
 
+void detectFeatures::Draw_GoodMatches(){
+	
+	Mat img_matches;
+	
+	drawMatches(left, keypointsLeft, right, keypointsRight, good_matches, img_matches,
+	Scalar::all(-1), Scalar::all(-1), vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
+	
+	imshow("Good Matches", img_matches);
+	
+	float x = 0; float y = 0;
+	
+	
+	waitKey(1);
+	
+}
 void detectFeatures::Draw_Keypoints(){
 	
 	Mat img_keypointsLeft, img_keypointsRight;
