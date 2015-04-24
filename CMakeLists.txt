@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(leap_object_tracking)
+#set(CMAKE_BUILD_TYPE Debug)
 
 find_package(catkin REQUIRED COMPONENTS roscpp rospy roslib std_msgs geometry_msgs message_generation std_msgs sensor_msgs visualization_msgs camera_info_manager rospack camera_calibration_parsers cv_bridge pcl_ros message_filters stereo_msgs)
 
@@ -25,7 +26,7 @@ include_directories(include
   ${Boost_INCLUDE_DIRS}
 )
 
-add_executable(node src/node.cpp src/leap_camera.cpp src/feature_detection.cpp src/point3D.cpp)
+add_executable(node src/node.cpp src/leap_camera.cpp src/feature_detection.cpp src/disparity.cpp)
 target_link_libraries(node 
   ${catkin_LIBRARIES}
   ${roscpp_LIBRARIES}

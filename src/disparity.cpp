@@ -19,9 +19,9 @@
 #include <opencv2/nonfree/features2d.hpp>
 #include <opencv2/nonfree/nonfree.hpp>
 #include "opencv2/highgui/highgui.hpp"
-
+ #include "opencv2/calib3d/calib3d.hpp"
 //Catking
-#include <leap_object_tracking/point3D.h>
+#include <leap_object_tracking/disparity.h>
 
 
     //////////////////////////////////////////////////////////////////
@@ -30,33 +30,30 @@
  ////                                                          ////
 //////////////////////////////////////////////////////////////////
 
-Point3D::Point3D(){
-	
-	x = 0;
-	y = 0;
-	z = 0;
-	
-}
-
-Point3D::Point3D(float x_p, float y_p, float z_p){
-	
-	x = x_p;
-	y = y_p;
-	z = z_p;
-	
-}
-
-void Point3D::SetX(float x_p){ x = x_p;}
-
-void Point3D::SetY(float y_p){y = y_p;}
-
-void Point3D::SetZ(float z_p){z = z_p;}
-
-float Point3D::GetX(){return x;}
-
-float Point3D::GetY(){return y;}
-
-float Point3D::GetZ(){return z;}
-
+	Disparity::Disparity(Mat left_rect, Mat right_rect){
+		
+		left = left_rect;
+		right = right_rect;	
+		
+	}
 
 	
+	void Disparity::computeDisparity(){
+		
+		stereo(left, right, disparity_img, CV_32F);
+		
+	}
+	Mat Disparity::Get_DisparityIMG(){
+		return disparity_img;
+	}
+	void Disparity::show_disparity(){
+		
+		Mat disp_show;
+		double minVal; double maxVal;
+		
+		minMaxLoc(disparity_img, &minVal, &maxVal);
+		
+		disparity_img.convertTo(disp_show, CV_8U, 255/(maxVal-minVal));
+		imshow("Disparity", disp_show);
+		
+	}

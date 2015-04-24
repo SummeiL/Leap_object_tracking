@@ -30,7 +30,7 @@
 #define startX 110
 #define startY 140
 
-using namespace Leap;
+using namespace Leap;;
 using namespace std;
 
 void CameraListener::onInit(const Controller& controller){
