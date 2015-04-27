@@ -24,6 +24,8 @@ private:
 	cv::Mat descriptorRight;
 	std::vector<cv::DMatch > matches;
 	std::vector<cv::DMatch> good_matches;
+	
+	
 
 public:
 

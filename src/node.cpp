@@ -20,6 +20,7 @@
 #include "pcl/point_cloud.h"
 #include "pcl/io/pcd_io.h"
 #include <pcl/point_types.h>
+#include "pcl_ros/point_cloud.h"
 //EIGEN
 #include <Eigen/Eigen>
 
@@ -50,6 +51,8 @@ using namespace stereo_msgs;
 const float f = 69.0143432617;
 const float T = 0.0401673726737;
 
+ros::Publisher pub_pointCloud;
+
 void ImagesCallback(const ImageConstPtr& imageLeft, const ImageConstPtr& imageRight){
 	
 	cv_bridge::CvImageConstPtr bridgeLeft;
@@ -79,12 +82,12 @@ void ImagesCallback(const ImageConstPtr& imageLeft, const ImageConstPtr& imageRi
 	}
 	
 
-	
 	detectFeatures detector(bridgeLeft->image,bridgeRight->image);
+
 	
 	//Keypoints Detection
 	detector.FAST_Detector();
-	
+
 	//Keypoints Extractor
 	detector.ORB_Extractor();
 	
@@ -96,7 +99,8 @@ void ImagesCallback(const ImageConstPtr& imageLeft, const ImageConstPtr& imageRi
 	disp.show_disparity();
 	
 	pcl::PointCloud<pcl::PointXYZ> cloud;
-	
+
+	cloud.header.frame_id = "leap_optical_frame";
 	cloud.width = detector.GetGoodMatches().size();	
 	cloud.height = 1;
 	cloud.is_dense = true;
@@ -113,14 +117,16 @@ void ImagesCallback(const ImageConstPtr& imageLeft, const ImageConstPtr& imageRi
 		cloud.points[i].y = detector.GetLeftKeyPoints()[detector.GetGoodMatches()[i].queryIdx].pt.y;
 		cloud.points[i].z = (f*T)/disp.Get_DisparityIMG().at<float>(x,y);
 	}
-	
+	pub_pointCloud.publish(cloud);
 	//Show Images and drawed features
 	detector.Show_LeftCam();
 	detector.Show_RightCam();
-	
+
 	detector.Draw_Keypoints();
 	detector.Draw_Matches();
 	detector.Draw_GoodMatches();
+	
+	cout << "Nº of Keypoints:  " << detector.GetGoodMatches().size() << endl;
 
 }
 	
@@ -133,13 +139,13 @@ int main(int argc, char** argv) {
 	//Create a sample listener and controller
 	CameraListener listener;
 	Controller controller;
-	controller.setPolicy(static_cast<Leap::Controller::PolicyFlag> (Leap::Controller::POLICY_OPTIMIZE_HMD));
+	//controller.setPolicy(static_cast<Leap::Controller::PolicyFlag> (Leap::Controller::POLICY_OPTIMIZE_HMD));
 
 	// Have the sample listener receive events from the controller
 	controller.addListener(listener);
 	controller.setPolicyFlags(static_cast<Leap::Controller::PolicyFlag> (Leap::Controller::POLICY_IMAGES));
 	
-	//ros::Subscriber disparity_sub = nh.subscribe("/leap_object_tracking/disparity",1,disparityCallback);
+	pub_pointCloud = nh.advertise<pcl::PointCloud<pcl::PointXYZ> > ("/leap_object_tracking/PointCloud",1);
 	
 	//Aprroximate synchronization of the images from both cameras for the callback
 	message_filters::Subscriber<sensor_msgs::Image> imageLeft_sub(nh, "/leap_object_tracking/left/image_raw",1);

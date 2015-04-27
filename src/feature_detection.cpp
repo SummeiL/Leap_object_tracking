@@ -197,6 +197,7 @@ void detectFeatures::Draw_Keypoints(){
 	imshow("Left Keypoints", img_keypointsLeft);
 	imshow("Right Keypoints", img_keypointsRight);
 	waitKey(1);
+	 
 }
 
 void detectFeatures::Show_LeftCam(){
