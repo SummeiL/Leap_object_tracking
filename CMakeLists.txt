@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 project(leap_object_tracking)
 #set(CMAKE_BUILD_TYPE Debug)
 
-find_package(catkin REQUIRED COMPONENTS roscpp rospy roslib std_msgs geometry_msgs message_generation std_msgs sensor_msgs visualization_msgs camera_info_manager rospack camera_calibration_parsers cv_bridge pcl_ros message_filters stereo_msgs)
+find_package(catkin REQUIRED COMPONENTS roscpp rospy roslib std_msgs geometry_msgs message_generation std_msgs sensor_msgs visualization_msgs camera_info_manager rospack camera_calibration_parsers cv_bridge pcl_ros message_filters stereo_msgs image_geometry stereo_image_proc)
 
 find_package(Boost REQUIRED COMPONENTS thread system)
 
@@ -15,7 +15,7 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}
 catkin_package(
    INCLUDE_DIRS include
 #  LIBRARIES leap_motion
-   CATKIN_DEPENDS roscpp rospy std_msgs message_runtime pcl_ros cv_bridge
+   CATKIN_DEPENDS roscpp rospy std_msgs message_runtime pcl_ros cv_bridge image_geometry stereo_image_proc
 #  DEPENDS system_lib
 )
 
@@ -26,7 +26,7 @@ include_directories(include
   ${Boost_INCLUDE_DIRS}
 )
 
-add_executable(node src/node.cpp src/leap_camera.cpp src/feature_detection.cpp src/disparity.cpp)
+add_executable(node src/node.cpp src/leap_camera.cpp src/feature_detection.cpp src/camera_frames.cpp src/stereo_camera.cpp src/particle_filter.cpp)
 target_link_libraries(node 
   ${catkin_LIBRARIES}
   ${roscpp_LIBRARIES}
