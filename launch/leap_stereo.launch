@@ -4,6 +4,7 @@
 	<node pkg="leap_object_tracking"
 	 type="node"
 	 name="camera_node" 
-	 output="screen"/>
+	 output="screen"
+	/>
   </group>
 </launch>

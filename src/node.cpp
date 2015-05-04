@@ -47,8 +47,11 @@ using namespace sensor_msgs;
 using namespace message_filters;
 using namespace stereo_msgs;
 
-ros::Publisher pub_pointCloud;
 ros::Publisher pub_PFCloud;
+CameraFrames Old_Frames;
+StereoCamera CameraModelOld;
+ParticleFilter Filter;
+bool a = true;
 
 void ImagesCallback(const ImageConstPtr& imageLeft, 
 					const ImageConstPtr& imageRight, 
@@ -56,50 +59,40 @@ void ImagesCallback(const ImageConstPtr& imageLeft,
 					const CameraInfoConstPtr& rightInfo){
 	
 	
+	
+	if(a){
+		
+		Old_Frames = CameraFrames(imageLeft, imageRight, leftInfo, rightInfo);
+		CameraModelOld = StereoCamera(Old_Frames);
+		CameraModelOld.Camera_Model();
+		CameraModelOld.computeDisparity();
+		Filter.InitializePF(CameraModelOld);
+		a = false;
+		pub_PFCloud.publish(Filter.GetPFcloud());
+		
+	}else{
+	
 	//Create an object with the images and camera information
-	CameraFrames Frames(imageLeft, imageRight, leftInfo, rightInfo);
-	
-	//Create an object with the camera model
-	StereoCamera CameraModel(Frames);
-	CameraModel.Camera_Model();
-	//Detect Features
-	detectFeatures detector(Frames.GetLeftFrame(), Frames.GetRightFrame());
-	
-	//Keypoints Detection
-	detector.FAST_Detector();
-
-	//Keypoints Extractor
-	detector.ORB_Extractor();
-	
-	//Keypoints Matching from left and right images
-	detector.BruteForce_Matcher();
+	CameraFrames New_Frames(imageLeft, imageRight, leftInfo, rightInfo);
+	StereoCamera CameraModelNew(New_Frames);
+	CameraModelNew.Camera_Model();
 	
 	//Compute the Disparity
-	CameraModel.computeDisparity();
-	//CameraModel.show_disparity();
+	CameraModelNew.computeDisparity();
 	
-	//Project Keypoints from disparity
-	CameraModel.projectDisparityKeypointsTo3d(detector);
+	//Particle Filter
+	Filter.SetActualFrame(New_Frames);
+	Filter.SetOldFrame(Old_Frames);
+	Filter.SetnParticles(100);
 	
-	//Create The Point Cloud
-	CameraModel.processPointCloud();
+	Filter.MotionModel(CameraModelNew, CameraModelOld);
 	
-	//Publish the cloud
-	pub_pointCloud.publish(CameraModel.GetCloud());
-	
-	ParticleFilter p;
+	Old_Frames = New_Frames;
+	CameraModelOld = CameraModelNew;
+	pub_PFCloud.publish(Filter.GetPFcloud());
+	New_Frames.Show_LeftCam();
+	}
 
-	p.InitializePF();
-	pub_PFCloud.publish(p.GetPFcloud());
-	
-
-	//Show Images and drawed features
-	detector.Show_LeftCam();
-	detector.Show_RightCam();
-
-	detector.Draw_Keypoints();
-	detector.Draw_Matches();
-	detector.Draw_GoodMatches();
 	
 }
 	
@@ -112,15 +105,14 @@ int main(int argc, char** argv) {
 
 	
 		//Create a sample listener and controller
-		//CameraListener listener;
-		//Controller controller;
-		//controller.setPolicy(static_cast<Leap::Controller::PolicyFlag> (Leap::Controller::POLICY_OPTIMIZE_HMD)); Dont uncomment
+		CameraListener listener;
+		Controller controller;
+		//controller.setPolicy(static_cast<Leap::Controller::PolicyFlag> (Leap::Controller::POLICY_DEFAULT)); 
 	
 		// Have the sample listener receive events from the controller
-		//controller.addListener(listener);
-		//controller.setPolicyFlags(static_cast<Leap::Controller::PolicyFlag> (Leap::Controller::POLICY_IMAGES));
+		controller.addListener(listener);
+		controller.setPolicyFlags(static_cast<Leap::Controller::PolicyFlag> (Leap::Controller::POLICY_IMAGES));
 
-		pub_pointCloud = nh.advertise<pcl::PointCloud<pcl::PointXYZ> >("/leap_object_tracking/PointCloud",1);
 		pub_PFCloud = nh.advertise<pcl::PointCloud<pcl::PointXYZ> >("/leap_object_tracking/PFPointCloud",1);
 		
 		//Aprroximate synchronization of the images from both cameras for the callback
@@ -136,7 +128,7 @@ int main(int argc, char** argv) {
 		ros::spin();
   
 		// Remove the sample listener when done
-		//controller.removeListener(listener);
+		controller.removeListener(listener);
 	
 	return 0;
 }

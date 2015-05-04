@@ -19,19 +19,24 @@ class StereoCamera{
 	stereo_msgs::DisparityImage disparity;
 	stereo_image_proc::StereoProcessor stereoproc;
 	Mat disparity_cv;
-	pcl::PointCloud<pcl::PointXYZ> cloud;
 	vector<cv::Point3d> points3dim;
 	
+	
  public:
-
+	StereoCamera(){ }
 	StereoCamera(CameraFrames);
+	StereoCamera(const StereoCamera&);
+	StereoCamera& operator = (const StereoCamera &f);
 	void Camera_Model();
 	void show_disparity();
 	void computeDisparity();
 	void disparityTocvFormat();
-	void projectDisparityKeypointsTo3d(detectFeatures);
-	void processPointCloud();
-	pcl::PointCloud<pcl::PointXYZ> GetCloud(){ return cloud; }
+	void projectpointsTo3d(std::vector<Point2d>);
+	Point3d projectOnepointTo3d(Point2d, double);
+	vector<cv::Point3d> GetPoints3dim(){return points3dim;}
+	Mat GetcvDisparity(){ return disparity_cv;}
+	double GetdispFromZ(double);
+	
 };
 
 #endif

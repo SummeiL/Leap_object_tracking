@@ -19,7 +19,7 @@
  ////                                                          ////
 //////////////////////////////////////////////////////////////////
 
-
+using namespace cv;
 
 CameraFrames::CameraFrames(const ImageConstPtr& Left, const ImageConstPtr& Right, const CameraInfoConstPtr& LeftInfo, const CameraInfoConstPtr& RightInfo){
 	
@@ -74,7 +74,20 @@ CameraFrames& CameraFrames::operator = (const CameraFrames &f){
 	
 }
 
+void CameraFrames::Show_LeftCam(){
+	
+	cv::rectangle(LeftFrame,Point(105,80),Point(175,140), Scalar( 255, 255, 255 ), 4);
+	imshow("Left Cam", LeftFrame);
+	cv::waitKey(1);
 
+}
+
+void CameraFrames::Show_RightCam(){
+	cv::rectangle(RightFrame,Point(105,80),Point(175,140), Scalar( 255, 255, 255 ), 4);
+	imshow("Right Cam", RightFrame);
+	cv::waitKey(1);
+
+}
 
 
 

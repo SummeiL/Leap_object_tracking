@@ -10,32 +10,42 @@
 #include "opencv2/highgui/highgui.hpp"
 #include <string.h>
 #include <iostream>
-
+#include <leap_object_tracking/camera_frames.h>
 
 class detectFeatures{
 	
 private:
-
-	cv::Mat left;
-	cv::Mat right;
-	std::vector<cv::KeyPoint> keypointsLeft;
-	std::vector<cv::KeyPoint> keypointsRight;
-	cv::Mat descriptorLeft;
-	cv::Mat descriptorRight;
+	
+	//Images containers
+	cv::Mat first;
+	cv::Mat second;
+	
+	//Descriptors containers
+	cv::Mat descriptorFirst;
+	cv::Mat descriptorSecond;
+	
+	//Keypoints vectors
+	std::vector<cv::KeyPoint> keypointsFirst;
+	std::vector<cv::KeyPoint> keypointsSecond;
+	
+	//Matches vectors
 	std::vector<cv::DMatch > matches;
 	std::vector<cv::DMatch> good_matches;
-	
-	
+
 
 public:
-
-	detectFeatures(cv::Mat a, cv::Mat b);
+	
+	detectFeatures(){}
+	detectFeatures(CameraFrames);
+	detectFeatures(CameraFrames, CameraFrames);
 	virtual ~detectFeatures() {}
 
-	std::vector<cv::KeyPoint>GetkeypointsLeft(){return keypointsLeft;}
-	std::vector<cv::KeyPoint>GetkeypointsRight(){return keypointsRight;}
-	cv::Mat GetLeftImage(){return left;};
-	cv::Mat GetRightImage(){return right;};
+	std::vector<cv::KeyPoint>GetFirstKeyPoints(){ return keypointsFirst;}
+	std::vector<cv::KeyPoint>GetSecondKeyPoints(){ return keypointsSecond;}
+	std::vector<cv::DMatch>GetGoodMatches(){ return good_matches;}
+	cv::Mat GetFirstImage(){return first;}
+	cv::Mat GetSecondImage(){return second;}
+	cv::Point2f GetMatchedPoint(int, int);
 
 	void SURF_Detector();
 	void SIFT_Detector();
@@ -52,12 +62,7 @@ public:
 	void Draw_Matches();
 	void Draw_GoodMatches();
 	
-	void Show_LeftCam();
-	void Show_RightCam();
-	
-	std::vector<cv::DMatch> GetGoodMatches();
-	std::vector<cv::KeyPoint> GetLeftKeyPoints();
-	std::vector<cv::KeyPoint> GetRightKeyPoints();
+
 };
 
 #endif
