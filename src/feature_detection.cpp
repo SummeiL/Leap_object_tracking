@@ -41,14 +41,7 @@ detectFeatures::detectFeatures(CameraFrames camframe){
 	second = camframe.GetRightFrame();	
 }
 
-detectFeatures::detectFeatures(CameraFrames ActualFrame, CameraFrames OldFrame){
-	
-	//Constructor for detection in 2 consecutive frames, comparing the first images.
-	
-	first = ActualFrame.GetLeftFrame();
-	second = OldFrame.GetLeftFrame();
 
-}
 
 void detectFeatures::SURF_Detector(){
 

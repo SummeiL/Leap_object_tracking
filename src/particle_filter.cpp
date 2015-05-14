@@ -1,214 +1,217 @@
-    ///////////////////////////////////////////////////////////////////
-   ////                                                           ////
-  ////                          INCLUDES                         ////
- ////                                                           ////
+///////////////////////////////////////////////////////////////////
+////                                                           ////
+////                          INCLUDES                         ////
+////                                                           ////
 ///////////////////////////////////////////////////////////////////
 
-
-#include <stdio.h>
-#include <iostream> 
-#include <ros/ros.h>
-#include <cv_bridge/cv_bridge.h>
 #include <leap_object_tracking/particle_filter.h>
-#include <cmath>
 
-
-    //////////////////////////////////////////////////////////////////
-   ////                                                          ////
-  ////                            CODE                          ////
- ////                                                         ////
+//////////////////////////////////////////////////////////////////
+////                                                          ////
+////                            CODE                          ////
+////                                                          ////
 //////////////////////////////////////////////////////////////////
 
+namespace Eigen{
+namespace internal {
+template<typename Scalar> 
+struct scalar_normal_dist_op 
+{
+	static boost::mt19937 rng;    // The uniform pseudo-random algorithm
+	mutable boost::normal_distribution<Scalar> norm;  // The gaussian combinator
 
-using namespace std;
+	EIGEN_EMPTY_STRUCT_CTOR(scalar_normal_dist_op)
 
-ParticleFilter::ParticleFilter(CameraFrames ActualFrame, CameraFrames OldFrame, int nparticles = 500){
-	
-	this->ActualFrame = ActualFrame;
-	this->OldFrame = OldFrame;
-	this->nparticles = nparticles;
-	
+	template<typename Index>
+	inline const Scalar operator() (Index, Index = 0) const { return norm(rng); }
+};
 
+template<typename Scalar> boost::mt19937 scalar_normal_dist_op<Scalar>::rng;
+
+template<typename Scalar>
+struct functor_traits<scalar_normal_dist_op<Scalar> >
+{ enum { Cost = 50 * NumTraits<Scalar>::MulCost, PacketAccess = false, IsRepeatable = false }; };
+} // end namespace internal
+} // end namespace Eigen
+
+/*
+	Function to initialize the filter with random particles in a fixed space
+ */
+
+void ParticleFilter::InitializePF(){
+
+	float x_min = 0; 		float x_max = 0.05;
+	float y_min = 0; 		float y_max = 0.05;
+	float z_min = 0; 		float z_max = 0.05;
+	float alpha_min = 0;	float alpha_max = 360;
+	float beta_min = 0; 	float beta_max = 360;
+	float gamma_min = 0; 	float gamma_max = 360;
+
+	std::random_device rd;
+	std::mt19937 gen(rd());
+
+	//Randomly generation in the limits x,y,z,a,b,c
+	std::uniform_real_distribution<double> dis_x(x_min, x_max);
+	std::uniform_real_distribution<double> dis_y(y_min, y_max);
+	std::uniform_real_distribution<double> dis_z(z_min, z_max);
+	std::uniform_real_distribution<double> dis_alpha(alpha_min, alpha_max);
+	std::uniform_real_distribution<double> dis_beta(beta_min, beta_max);
+	std::uniform_real_distribution<double> dis_gamma(gamma_min, gamma_max);
+
+	//Change to radiants
+	float r = M_PI/180;
+
+	for (int n = 0; n < nparticles; ++n){
+
+		FilterParticles.push_back(Particle(dis_x(gen), dis_y(gen), dis_z(gen), dis_alpha(gen)*r, dis_beta(gen)*r, dis_gamma(gen)*r, n));
+
+	}
+	//cout << FilterParticles.size()<<std::endl;
 }
 
-void ParticleFilter::GeneratePFcloud(){
-	
-		PFcloud.header.frame_id = "leap_optical_frame";
-		PFcloud.height = 1;
-		PFcloud.width = nparticles;
-		PFcloud.points.resize (PFcloud.width * PFcloud.height);
-		PFcloud.is_dense = false; 
-	
-}
-
-void ParticleFilter::InitializePF(StereoCamera C){
-
-	GeneratePFcloud();
-
-	srand(time(NULL));
-
-	float x_rand;
-	float y_rand;
-	float z_rand;
-	float x_low, y_low, x_high, y_high;
+/*
+	Motion Model of the Particle filter
+ */
 
 
-	Point2d leftTop(105,80);
-	Point2d rightBot(175,140);
-	Point3d leftTop3d;
-	Point3d rightBot3d;
+void ParticleFilter::MotionModel(){
 
-	leftTop3d = C.projectOnepointTo3d(leftTop, C.GetdispFromZ(0.05));
-	rightBot3d = C.projectOnepointTo3d(rightBot, C.GetdispFromZ(0.05));
-	
-	x_low = leftTop3d.x;
-	x_high = rightBot3d.x;
-	
-	y_low = leftTop3d.y;
-	y_high = rightBot3d.y;
+	std::vector<Particle> aux_particlevector;
 
-	if(x_low > rightBot3d.x){
-		x_low = rightBot3d.x;
-		x_high = leftTop3d.x;
-	}
+	for(int i = 0; i < FilterParticles.size(); i++){
 
-	if(y_low > rightBot3d.y){
-		y_low = rightBot3d.y;
-		y_high = leftTop3d.y;
-	}
-	
-	//cout << "x_low = " << x_low << "   x_high = " << x_high << "   y_low = "<< y_low << "   y_high = " << y_high << endl;
+		Eigen::MatrixXd samples;
 
-	for (unsigned int i = 0; i < PFcloud.size(); ++i)
-	{
-		//Generate random number for the limits  value = rand() % (high-low) + low
+		samples = MultivariateGaussian(FilterParticles.at(i).GetX(),
+				FilterParticles.at(i).GetY(),
+				FilterParticles.at(i).GetZ(),
+				FilterParticles.at(i).GetAlpha(),
+				FilterParticles.at(i).GetBeta(),
+				FilterParticles.at(i).GetGamma());
 
-		x_rand = (x_low) + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(x_high-(x_low)))); //Between [-2.86863, 2.7548]m
-		y_rand = (y_high) + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(y_high-(y_low))));  //Between [-2.1049,2.3135]m
-		z_rand = 0.05;
+		for(int j = 0; j < nn; j++){
 
-		//Distribute the Points randomly in that region
-		PFcloud.points[i].x = x_rand;
-		PFcloud.points[i].y = y_rand;
-		PFcloud.points[i].z = z_rand;
-	}
+			Particle p;
 
-}
-
-void ParticleFilter::ComputeDiffs(vector<cv::Point3d> Actual3dPoints, vector<cv::Point3d> Old3dPoints){
-
-
-	if(Actual3dPoints.size() == 0) { cout << "zero" << endl;}
-
-	double aux2_diffX = 0; double aux2_diffY = 0; double aux2_diffZ = 0;
-
-	for(int i = 0; i < Actual3dPoints.size(); i++){
-
-		double diffX = 0; double diffY = 0; double diffZ = 0;
-		double aux_diffX = 0; double aux_diffY = 0; double aux_diffZ = 0;
-
-		for(int j = 0; j < Old3dPoints.size(); j++){
-
-			aux_diffX = Actual3dPoints.at(i).x - Old3dPoints.at(j).x;
-			aux_diffY = Actual3dPoints.at(i).y - Old3dPoints.at(j).y;
-			aux_diffZ = Actual3dPoints.at(i).z - Old3dPoints.at(j).z;
-
-			diffX = diffX + aux_diffX;
-			diffY = diffY + aux_diffY;
-			diffZ = diffZ + aux_diffZ;
+			p.SetX(samples(0,j));
+			p.SetY(samples(1,j));
+			p.SetZ(samples(2,j));
+			p.SetAlpha(samples(3,j));
+			p.SetBeta(samples(4,j));
+			p.SetGamma(samples(5,j));
+			p.Setid(i+0.1*j);
+			aux_particlevector.push_back(p);
 		}
-
-		aux2_diffX = aux2_diffX + (diffX/Old3dPoints.size());
-		aux2_diffY = aux2_diffY + (diffY/Old3dPoints.size());
-		aux2_diffZ = aux2_diffZ + (diffZ/Old3dPoints.size());		
+		//cout << "debe ser veinte: " << aux_particlevector.size() << endl;
+		FilterParticlesWithCovariance.push_back(aux_particlevector);
+		aux_particlevector.clear();	
 	}
-
-	if(Actual3dPoints.size() == 0 || Old3dPoints.size() == 0){
-
-		deltaX = 0;
-		deltaY = 0;
-		deltaZ = 0;
-
-	}else{
-
-		deltaX = aux2_diffX/(Actual3dPoints.size());
-		deltaY = aux2_diffY/(Actual3dPoints.size());
-		deltaZ = aux2_diffZ/(Actual3dPoints.size());
-	}
+	std::cout << "debe ser dosmil: " << FilterParticlesWithCovariance.size()*FilterParticlesWithCovariance.at(0).size() << std::endl;
 
 }
 
-double ParticleFilter::sample(double b_square){
+/*
+	Measurement Model: weight particles based on the distance to an edge
+ */
 
-	double b = sqrt(b_square);
-	double sum = 0;
+void ParticleFilter::MeasurementModel(){
 
-	for(int i = 0; i < 12; i++){
-		
-		double r = ((float) rand())/(float)RAND_MAX;
-		double c = 2*b*r;
-		sum = sum + c - b;
-	}
+	for(int  i = 0; i < FilterParticlesWithCovariance.size(); i++){
+		for(int j = 0; j < FilterParticlesWithCovariance.at(i).size(); j++){
 
-	return(sum/2);
-}
+			Models model;
+			std::vector<cv::Point2f> left;
+			std::vector<cv::Point2f> right;
+			cv::Mat leftdistanceIMG;
+			cv::Mat rightdistanceIMG;
+			float D_Left = 0; float  D_Right = 0;
 
-void ParticleFilter::MotionModel(StereoCamera camModelNew, StereoCamera camModelOld){
+			model.Cylinder(FilterParticlesWithCovariance.at(i).at(j),0.0175, 0.07);
 	
-	variance = 0.3;
-	std::vector <Point2d> Actual2dKeypoints;
-	std::vector <Point2d> Old2dKeypoints;
-	
-	detectFeatures detect(ActualFrame, OldFrame);
-	detect.FAST_Detector();
-	detect.ORB_Extractor();
-	detect.BruteForce_Matcher();
-	detect.Draw_GoodMatches();
-	
-	for(int i = 0; i < detect.GetGoodMatches().size(); i++){
-		
-		Actual2dKeypoints.push_back(detect.GetFirstKeyPoints()[detect.GetGoodMatches()[i].queryIdx].pt);
-		Old2dKeypoints.push_back(detect.GetSecondKeyPoints()[detect.GetGoodMatches()[i].trainIdx].pt);
-				
-	}
-	
-	camModelNew.projectpointsTo3d(Actual2dKeypoints);
-	camModelOld.projectpointsTo3d(Old2dKeypoints);
+			NewcamModel.ProjectToCameraPlane(model.Get_ModelPoints());
 
-	Filter3dPoints(camModelNew, camModelOld, Actual2dKeypoints, Old2dKeypoints);
-	
-	ComputeDiffs(Actual3dPoints, Old3dPoints);
+				left = NewcamModel.GetProjectedModelPointsLeft();
+				right = NewcamModel.GetProjectedModelPointsRight();
 
-	if(deltaX != 0 || deltaY != 0 || deltaZ != 0){
-			
-		for(int i = 0; i < PFcloud.size(); i++){
-			
-			//Perturb the components adding noise	
-			PFcloud.points[i].x = PFcloud.points[i].x + deltaX;
-			PFcloud.points[i].y = PFcloud.points[i].y + deltaY;
-			PFcloud.points[i].z = PFcloud.points[i].z + deltaZ;
+
+/*				for(int k = 0; k < (left.size() > right.size() ? right.size() : left.size()); k++){
+					float D_max = 279;
+					float D_min = 0;
+
+					if(left.at(k).x > 0 && left.at(k).x < 280 && right.at(k).x > 0 && right.at(k).x < 280
+							&& left.at(k).y > 
+
+
+					0 && left.at(k).y < 220 && right.at(k).y > 0 && right.at(k).y < 220){
+						std::cout << left.at(k) << std::endl;
+						D_Left = NewFrame.GetLeftDistanceFrame().at<float>(left.at(k).x, left.at(k).y);
+						D_Right = NewFrame.GetRightDistanceFrame().at<float>(right.at(k).x, right.at(k).y);
+
+						if(D_Left < D_max && D_Left > D_min && D_Right < D_max && D_Right > D_min){
+							D_Left = ((D_Left - D_min)/(D_max - D_min))*100;
+							D_Right = ((D_Right - D_min)/(D_max - D_min))*100;
+							//std::cout << D_Left << " " << D_Right <<std::endl;
+						}	
+					}
+				}*/
 			
 		}
 	}
-
+	FilterParticlesWithCovariance.clear();
 }
 
-void ParticleFilter::Filter3dPoints(StereoCamera camModelNew, StereoCamera camModelOld,
-		std::vector <Point2d> Actual2dKeypoints, std::vector <Point2d> Old2dKeypoints){
-	if(camModelNew.GetPoints3dim().size() != 0){
 
-		for(int i = 0; i < camModelNew.GetPoints3dim().size(); i++){
 
-			if(camModelNew.GetcvDisparity().at<float>(Actual2dKeypoints.at(i).x, Actual2dKeypoints.at(i).y) != -1 
-					&& camModelOld.GetcvDisparity().at<float>(Old2dKeypoints.at(i).x, Old2dKeypoints.at(i).y) != -1){
+/*
+  Draw nn samples from a size-dimensional normal distribution
+  with a specified mean and covariance
+*/
 
-				Actual3dPoints.push_back(camModelNew.GetPoints3dim().at(i));
-				Old3dPoints.push_back(camModelOld.GetPoints3dim().at(i));
-				
-			}					
-		}
+Eigen::MatrixXd ParticleFilter::MultivariateGaussian(float x, float y, float z, float a, float b, float c){
+	
+	Eigen::internal::scalar_normal_dist_op<double> randN; // Gaussian functor
+	Eigen::internal::scalar_normal_dist_op<double>::rng.seed(1); // Seed the rng
+
+	// Define mean and covariance of the distribution
+	Eigen::VectorXd mean(size);       
+	Eigen::MatrixXd covar(size,size);
+
+	mean  <<  x, y, z, a, b, c;
+	covar <<  .5, 0, 0, 0, 0, 0,
+			   0, .5, 0, 0, 0, 0,
+			   0, 0, .5, 0, 0, 0,
+			   0, 0, 0, .5, 0, 0,
+			   0, 0, 0, 0, .5, 0,
+			   0, 0, 0, 0, 0, .5;
+
+	Eigen::MatrixXd normTransform(size,size);
+
+	Eigen::LLT<Eigen::MatrixXd> cholSolver(covar);
+
+	// We can only use the cholesky decomposition if 
+	// the covariance matrix is symmetric, pos-definite.
+	// But a covariance matrix might be pos-semi-definite.
+	// In that case, we'll go to an EigenSolver
+	if (cholSolver.info()==Eigen::Success) {
+		// Use cholesky solver
+		normTransform = cholSolver.matrixL();
+	} else {
+		// Use eigen solver
+		Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigenSolver(covar);
+		normTransform = eigenSolver.eigenvectors() 
+	                		   * eigenSolver.eigenvalues().cwiseSqrt().asDiagonal();
 	}
 
+	Eigen::MatrixXd samples = (normTransform 
+			* Eigen::MatrixXd::NullaryExpr(size,nn,randN)).colwise() 
+	                        		   + mean;
+
+//	std::cout << "Mean\n" << mean << std::endl;
+//	std::cout << "Covar\n" << covar << std::endl;
+//	std::cout << "Samples\n" << samples << std::endl;
+//	cout << "------------" << endl;
+	
+	return(samples);
 }
 
 

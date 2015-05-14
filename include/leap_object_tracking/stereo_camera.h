@@ -1,14 +1,21 @@
 #ifndef STEREO_CAMERA_H
 #define STEREO_CAMERA_H
 
-#include "image_geometry/stereo_camera_model.h"
-#include "stereo_image_proc/processor.h"
-#include <leap_object_tracking/camera_frames.h>
-#include <leap_object_tracking/feature_detection.h>
-#include "pcl_ros/point_cloud.h"
+///////////////////////////////////////////////////////////////////
+////                                                           ////
+////                          INCLUDES                         ////
+////                                                           ////
+///////////////////////////////////////////////////////////////////
 
-using namespace cv;
-using namespace sensor_msgs;
+#include <iostream> 
+#include <ros/ros.h>
+#include <Eigen/Eigen>
+#include <cv_bridge/cv_bridge.h>
+#include <opencv2/core/eigen.hpp>
+#include "image_geometry/stereo_camera_model.h"
+#include <leap_object_tracking/feature_detection.h>
+#include <leap_object_tracking/camera_frames.h>
+
 
 class StereoCamera{
 
@@ -16,27 +23,32 @@ class StereoCamera{
 
 	CameraFrames Frames;
 	image_geometry::StereoCameraModel camModel;
-	stereo_msgs::DisparityImage disparity;
-	stereo_image_proc::StereoProcessor stereoproc;
-	Mat disparity_cv;
-	vector<cv::Point3d> points3dim;
 	
+	Eigen::MatrixXf H;
+
+	std::vector<cv::Point2f> modelpoints2dleft;
+	std::vector<cv::Point2f> modelpoints2dright;
 	
  public:
+	
+	//Constructors and Destructor
 	StereoCamera(){ }
 	StereoCamera(CameraFrames);
 	StereoCamera(const StereoCamera&);
-	StereoCamera& operator = (const StereoCamera &f);
-	void Camera_Model();
-	void show_disparity();
-	void computeDisparity();
-	void disparityTocvFormat();
-	void projectpointsTo3d(std::vector<Point2d>);
-	Point3d projectOnepointTo3d(Point2d, double);
-	vector<cv::Point3d> GetPoints3dim(){return points3dim;}
-	Mat GetcvDisparity(){ return disparity_cv;}
-	double GetdispFromZ(double);
+	~StereoCamera(){}
 	
+	//Operator
+	StereoCamera& operator = (const StereoCamera &);
+	
+	//Set and Get Methods
+	std::vector<cv::Point2f>GetProjectedModelPointsLeft(){ return modelpoints2dleft;}
+	std::vector<cv::Point2f>GetProjectedModelPointsRight(){ return modelpoints2dright;}
+	void SetFrames(CameraFrames Frames){ this->Frames = Frames;}
+
+	//Methods for computing transformations on the images
+	void Camera_Model();
+	void FindHomography();
+	void ProjectToCameraPlane(std::vector<cv::Point3f>);	
 };
 
 #endif

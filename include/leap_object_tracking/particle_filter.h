@@ -1,45 +1,63 @@
 #ifndef PARTICLE_FILTER_H
 #define PARTICLE_FILTER_H
 
-#include "pcl_ros/point_cloud.h"
-#include <leap_object_tracking/camera_frames.h>
-#include <leap_object_tracking/feature_detection.h>
-#include <leap_object_tracking/stereo_camera.h>
+///////////////////////////////////////////////////////////////////
+////                                                           ////
+////                          INCLUDES                         ////
+////                                                           ////
+///////////////////////////////////////////////////////////////////
 
-using namespace std;
+#include <iostream> 
+#include <ros/ros.h>
+#include <cv_bridge/cv_bridge.h>
+#include <cmath>
+#include <boost/random/mersenne_twister.hpp>
+#include <boost/random/normal_distribution.hpp>
+#include <leap_object_tracking/camera_frames.h>
+#include <leap_object_tracking/stereo_camera.h>
+#include <leap_object_tracking/object_models.h>
+#include <leap_object_tracking/particle.h>
+
+//////////////////////////////////////////////////////////////////
+////                                                          ////
+////                            CODE                          ////
+////                                                          ////
+//////////////////////////////////////////////////////////////////
 
 
 class ParticleFilter{
+
+private:
 	
-	private:
+	CameraFrames NewFrame;
+	StereoCamera NewcamModel;
 	
-	pcl::PointCloud<pcl::PointXYZ> PFcloud;
+	std::vector<cv::Point2d> ModelInCameraPlane;
+	std::vector<Particle> FilterParticles;
+	std::vector<std::vector<Particle> > FilterParticlesWithCovariance;
 	int nparticles;
-	double deltaX, deltaY, deltaZ;
-	double variance;
-	CameraFrames ActualFrame, OldFrame;
-	vector<cv::Point3d> Actual3dPoints;
-	vector<cv::Point3d> Old3dPoints;
 	
-	public:
+	//Gaussian distribution parameters
+	int nn = 5;     // How many samples (columns) to draw
+	int size = 6; // Dimensionality (rows)
+		
+public:
 	
-	ParticleFilter(){ nparticles = 100;}
-	ParticleFilter(CameraFrames, CameraFrames, int);
+	//Constructor and Destructor
+	ParticleFilter(){}
+	~ParticleFilter(){}
 	
-	void SetActualFrame(CameraFrames ActualFrame){ this->ActualFrame = ActualFrame;}
-	void SetOldFrame(CameraFrames OldFrame){ this->OldFrame = OldFrame;}
-	void SetnParticles(int nparticles){ this->nparticles = nparticles;}
-	void GeneratePFcloud();
-	void InitializePF(StereoCamera);
-	void ComputeDiffs(vector<cv::Point3d>, vector<cv::Point3d>);
-	double sample(double);
-	void MotionModel(StereoCamera, StereoCamera);
+	//SetMethods
+	void Set_nparticles(int nparticles){ this->nparticles = nparticles;}
+	void Set_NewFrame(CameraFrames NewFrame){this->NewFrame = NewFrame;}
+	void Set_NewCamModel(StereoCamera NewcamModel){this->NewcamModel = NewcamModel;}
+	
+	//Particle Filter Steps and functions
+	void InitializePF();
+	void MotionModel();
 	void MeasurementModel();
-	void Resampling();
-	pcl::PointCloud<pcl::PointXYZ> GetPFcloud(){return PFcloud;}
-	void Filter3dPoints(StereoCamera, StereoCamera, std::vector <Point2d>, std::vector <Point2d>);
 	
-	
+	Eigen::MatrixXd MultivariateGaussian(float, float, float, float, float, float);
 };
 
 #endif

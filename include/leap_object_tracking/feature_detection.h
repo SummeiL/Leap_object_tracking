@@ -37,7 +37,6 @@ public:
 	
 	detectFeatures(){}
 	detectFeatures(CameraFrames);
-	detectFeatures(CameraFrames, CameraFrames);
 	virtual ~detectFeatures() {}
 
 	std::vector<cv::KeyPoint>GetFirstKeyPoints(){ return keypointsFirst;}
