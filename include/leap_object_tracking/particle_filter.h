@@ -56,6 +56,7 @@ public:
 	void InitializePF();
 	void MotionModel();
 	void MeasurementModel();
+	void Resampling();
 	
 	Eigen::MatrixXd MultivariateGaussian(float, float, float, float, float, float);
 };

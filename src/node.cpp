@@ -116,7 +116,7 @@ void ImagesCallback(const sensor_msgs::ImageConstPtr& imageLeft,
 		Filter.MotionModel();
 		
 		//Measurement Model
-		//Filter.MeasurementModel();
+		Filter.MeasurementModel();
 
 		//Cope new to old for the next iteration
 		Old_Frames = New_Frames;

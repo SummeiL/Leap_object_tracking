@@ -86,7 +86,7 @@ void Models::Cube(double side, cv::Point3f O){
 void Models::Cylinder(Particle p, float radius, float heigth){
 
 	float step_a= (2*M_PI)/72;
-	float step_h = heigth/200;
+	float step_h = heigth/100;
 
 	for(float h = 0; h < heigth; h+=step_h)
 		
@@ -115,4 +115,5 @@ void Models::Cylinder(Particle p, float radius, float heigth){
 				ModelPoints.push_back(aux);
 			}
 		}
+	//std::cout << ModelPoints.size() << std::endl;
 }

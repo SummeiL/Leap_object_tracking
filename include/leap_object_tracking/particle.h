@@ -21,6 +21,7 @@ private:
 	float alpha;
 	float beta;
 	float gamma;
+	double prob;
 
 
 
@@ -32,6 +33,7 @@ public:
 		x = 0; y = 0; z = 0;
 		alpha = 0; beta = 0; gamma = 0;
 		id = -1;
+		prob = 0;
 	}
 
 	Particle(float x, float y, float z, float alpha, float beta, float gamma, float id){
@@ -55,6 +57,7 @@ public:
 	void SetAlpha(float alpha){ this->alpha = alpha;}
 	void SetBeta(float beta){ this->beta = beta;}
 	void SetGamma(float gamma){ this->gamma = gamma;}
+	void SetProb(double prob){ this->prob = prob;}
 
 	float Getid(){ return id;}
 	float GetX(){return x;}
@@ -63,6 +66,7 @@ public:
 	float GetAlpha(){return alpha;}
 	float GetBeta(){return beta;}
 	float GetGamma(){return gamma;}	
+	float GetProb(){return prob;}
 };
 
 #endif

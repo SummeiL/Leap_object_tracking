@@ -83,11 +83,11 @@ void ParticleFilter::MotionModel(){
 		Eigen::MatrixXd samples;
 
 		samples = MultivariateGaussian(FilterParticles.at(i).GetX(),
-				FilterParticles.at(i).GetY(),
-				FilterParticles.at(i).GetZ(),
-				FilterParticles.at(i).GetAlpha(),
-				FilterParticles.at(i).GetBeta(),
-				FilterParticles.at(i).GetGamma());
+									   FilterParticles.at(i).GetY(),
+									   FilterParticles.at(i).GetZ(),
+									   FilterParticles.at(i).GetAlpha(),
+									   FilterParticles.at(i).GetBeta(),
+									   FilterParticles.at(i).GetGamma());
 
 		for(int j = 0; j < nn; j++){
 
@@ -102,12 +102,9 @@ void ParticleFilter::MotionModel(){
 			p.Setid(i+0.1*j);
 			aux_particlevector.push_back(p);
 		}
-		//cout << "debe ser veinte: " << aux_particlevector.size() << endl;
 		FilterParticlesWithCovariance.push_back(aux_particlevector);
 		aux_particlevector.clear();	
 	}
-	std::cout << "debe ser dosmil: " << FilterParticlesWithCovariance.size()*FilterParticlesWithCovariance.at(0).size() << std::endl;
-
 }
 
 /*
@@ -124,42 +121,55 @@ void ParticleFilter::MeasurementModel(){
 			std::vector<cv::Point2f> right;
 			cv::Mat leftdistanceIMG;
 			cv::Mat rightdistanceIMG;
-			float D_Left = 0; float  D_Right = 0;
+			double D_Left = 0; double  D_Right = 0;
 
 			model.Cylinder(FilterParticlesWithCovariance.at(i).at(j),0.0175, 0.07);
-	
+
 			NewcamModel.ProjectToCameraPlane(model.Get_ModelPoints());
 
-				left = NewcamModel.GetProjectedModelPointsLeft();
-				right = NewcamModel.GetProjectedModelPointsRight();
+			left = NewcamModel.GetProjectedModelPointsLeft();
+			right = NewcamModel.GetProjectedModelPointsRight();
 
 
-/*				for(int k = 0; k < (left.size() > right.size() ? right.size() : left.size()); k++){
-					float D_max = 279;
-					float D_min = 0;
+			for(int k = 0; k < (left.size() > right.size() ? right.size() : left.size()); k++){
+	  			double D_max = 279;
+				double D_min = 0;
+				double Normalizer_Left = 0;
+				double Normalizer_Right = 0;
+				double p_Left = 0;
+				double p_Right = 0;
+				double lambda = 0.005;
 
-					if(left.at(k).x > 0 && left.at(k).x < 280 && right.at(k).x > 0 && right.at(k).x < 280
-							&& left.at(k).y > 
+				if(left.at(k).x > 0 && left.at(k).x < 280 && right.at(k).x > 0 && right.at(k).x < 280
+						&& left.at(k).y > 0 && left.at(k).y < 220 && right.at(k).y > 0 && right.at(k).y < 220){
+					
+					
+					D_Left =(double) NewFrame.GetLeftDistanceFrame().at<float>(left.at(k).x, left.at(k).y);
+					D_Right = (double) NewFrame.GetRightDistanceFrame().at<float>(right.at(k).x, right.at(k).y);
+		
+					
+					Normalizer_Left = 1/(1-exp(-lambda*D_max));
+					p_Left = Normalizer_Left*lambda*exp(-lambda*D_Left);
+					
+					Normalizer_Right = 1/(1-exp(-lambda*D_max));
+					p_Right = Normalizer_Right*lambda*exp(-lambda*D_Right);
+					
+					FilterParticlesWithCovariance.at(i).at(j).SetProb(p_Left + p_Right);
 
-
-					0 && left.at(k).y < 220 && right.at(k).y > 0 && right.at(k).y < 220){
-						std::cout << left.at(k) << std::endl;
-						D_Left = NewFrame.GetLeftDistanceFrame().at<float>(left.at(k).x, left.at(k).y);
-						D_Right = NewFrame.GetRightDistanceFrame().at<float>(right.at(k).x, right.at(k).y);
-
-						if(D_Left < D_max && D_Left > D_min && D_Right < D_max && D_Right > D_min){
-							D_Left = ((D_Left - D_min)/(D_max - D_min))*100;
-							D_Right = ((D_Right - D_min)/(D_max - D_min))*100;
-							//std::cout << D_Left << " " << D_Right <<std::endl;
-						}	
-					}
-				}*/
-			
+					
+/*					std::cout << "D_Left     D_Right     NORM      p_Left      p_Right" << std::endl;
+					std::cout << D_Left << "    " << D_Right  << "     " <<Normalizer_Left << "   " << p_Left  <<"   " << p_Right << std::endl;	*/
+								
+				}
+			}		
 		}
 	}
-	FilterParticlesWithCovariance.clear();
 }
 
+void ParticleFilter::Resampling(){
+	
+	
+}
 
 
 /*
@@ -177,12 +187,12 @@ Eigen::MatrixXd ParticleFilter::MultivariateGaussian(float x, float y, float z, 
 	Eigen::MatrixXd covar(size,size);
 
 	mean  <<  x, y, z, a, b, c;
-	covar <<  .5, 0, 0, 0, 0, 0,
-			   0, .5, 0, 0, 0, 0,
-			   0, 0, .5, 0, 0, 0,
-			   0, 0, 0, .5, 0, 0,
-			   0, 0, 0, 0, .5, 0,
-			   0, 0, 0, 0, 0, .5;
+	covar <<  .05, 0, 0, 0, 0, 0,
+			   0, .05, 0, 0, 0, 0,
+			   0, 0, .05, 0, 0, 0,
+			   0, 0, 0, .05, 0, 0,
+			   0, 0, 0, 0, .05, 0,
+			   0, 0, 0, 0, 0, .05;
 
 	Eigen::MatrixXd normTransform(size,size);
 
