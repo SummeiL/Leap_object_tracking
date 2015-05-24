@@ -10,6 +10,7 @@
 #include <leap_object_tracking/camera_frames.h>
 
 
+
 //////////////////////////////////////////////////////////////////
 ////                                                          ////
 ////                            CODE                          ////
@@ -17,9 +18,9 @@
 //////////////////////////////////////////////////////////////////
 
 CameraFrames::CameraFrames(const sensor_msgs::ImageConstPtr& Left,
-		const sensor_msgs::ImageConstPtr& Right, 
-		const sensor_msgs::CameraInfoConstPtr& LeftInfo, 
-		const sensor_msgs::CameraInfoConstPtr& RightInfo){
+						   const sensor_msgs::ImageConstPtr& Right, 
+						   const sensor_msgs::CameraInfoConstPtr& LeftInfo, 
+						   const sensor_msgs::CameraInfoConstPtr& RightInfo){
 
 	leftCamInfo = LeftInfo; 
 	rightCamInfo = RightInfo;
@@ -85,7 +86,7 @@ CameraFrames& CameraFrames::operator = (const CameraFrames &f){
 
 void CameraFrames::Show_LeftCam(){
 
-	cv::rectangle(LeftFrame, cv::Point(105,80), cv::Point(175,140), cv::Scalar( 255, 255, 255 ), 4);
+	//cv::rectangle(LeftFrame, cv::Point(105,80), cv::Point(175,140), cv::Scalar( 255, 255, 255 ), 4);
 	cv::imshow("Left Cam", LeftFrame);
 	cv::waitKey(1);
 
@@ -93,7 +94,7 @@ void CameraFrames::Show_LeftCam(){
 
 void CameraFrames::Show_RightCam(){
 
-	cv::rectangle(RightFrame, cv::Point(105,80), cv::Point(175,140), cv::Scalar( 255, 255, 255 ), 4);
+	//cv::rectangle(RightFrame, cv::Point(105,80), cv::Point(175,140), cv::Scalar( 255, 255, 255 ), 4);
 	cv::imshow("Right Cam", RightFrame);
 	cv::waitKey(1);
 

@@ -5,12 +5,17 @@
 ///////////////////////////////////////////////////////////////////
 
 #include <leap_object_tracking/particle_filter.h>
+#include <leap_object_tracking/GetTime.h>
+
 
 //////////////////////////////////////////////////////////////////
 ////                                                          ////
 ////                            CODE                          ////
 ////                                                          ////
 //////////////////////////////////////////////////////////////////
+
+//Change to radiants
+float r = M_PI/180;
 
 namespace Eigen{
 namespace internal {
@@ -34,6 +39,9 @@ struct functor_traits<scalar_normal_dist_op<Scalar> >
 } // end namespace internal
 } // end namespace Eigen
 
+std::random_device rd;
+std::mt19937 gen(rd());
+
 /*
 	Function to initialize the filter with random particles in a fixed space
  */
@@ -47,8 +55,6 @@ void ParticleFilter::InitializePF(){
 	float beta_min = 0; 	float beta_max = 360;
 	float gamma_min = 0; 	float gamma_max = 360;
 
-	std::random_device rd;
-	std::mt19937 gen(rd());
 
 	//Randomly generation in the limits x,y,z,a,b,c
 	std::uniform_real_distribution<double> dis_x(x_min, x_max);
@@ -57,9 +63,6 @@ void ParticleFilter::InitializePF(){
 	std::uniform_real_distribution<double> dis_alpha(alpha_min, alpha_max);
 	std::uniform_real_distribution<double> dis_beta(beta_min, beta_max);
 	std::uniform_real_distribution<double> dis_gamma(gamma_min, gamma_max);
-
-	//Change to radiants
-	float r = M_PI/180;
 
 	for (int n = 0; n < nparticles; ++n){
 
@@ -77,10 +80,10 @@ void ParticleFilter::InitializePF(){
 void ParticleFilter::MotionModel(){
 
 	std::vector<Particle> aux_particlevector;
+	Eigen::MatrixXd samples;
+	Particle p;
 
 	for(int i = 0; i < FilterParticles.size(); i++){
-
-		Eigen::MatrixXd samples;
 
 		samples = MultivariateGaussian(FilterParticles.at(i).GetX(),
 									   FilterParticles.at(i).GetY(),
@@ -90,8 +93,6 @@ void ParticleFilter::MotionModel(){
 									   FilterParticles.at(i).GetGamma());
 
 		for(int j = 0; j < nn; j++){
-
-			Particle p;
 
 			p.SetX(samples(0,j));
 			p.SetY(samples(1,j));
@@ -105,6 +106,7 @@ void ParticleFilter::MotionModel(){
 		FilterParticlesWithCovariance.push_back(aux_particlevector);
 		aux_particlevector.clear();	
 	}
+	FilterParticles.clear();
 }
 
 /*
@@ -113,62 +115,127 @@ void ParticleFilter::MotionModel(){
 
 void ParticleFilter::MeasurementModel(){
 
+	Models model;
+	std::vector<cv::Point2f> left;
+	std::vector<cv::Point2f> right;
+
+	double D_Left, D_Right;
+	double D_max = 279; double D_min = 0;
+
+	double Normalizer_Left, Normalizer_Right;
+	double p_Left, p_Right;
+	double lambda = 0.005;
+
 	for(int  i = 0; i < FilterParticlesWithCovariance.size(); i++){
 		for(int j = 0; j < FilterParticlesWithCovariance.at(i).size(); j++){
-
-			Models model;
-			std::vector<cv::Point2f> left;
-			std::vector<cv::Point2f> right;
-			cv::Mat leftdistanceIMG;
-			cv::Mat rightdistanceIMG;
-			double D_Left = 0; double  D_Right = 0;
-
+			
+			double a = GetTimeMs64();
 			model.Cylinder(FilterParticlesWithCovariance.at(i).at(j),0.0175, 0.07);
-
 			NewcamModel.ProjectToCameraPlane(model.Get_ModelPoints());
+			double b = GetTimeMs64();
+			
+			std::cout << b - a << std::endl;
+			
+			
+
 
 			left = NewcamModel.GetProjectedModelPointsLeft();
 			right = NewcamModel.GetProjectedModelPointsRight();
 
-
 			for(int k = 0; k < (left.size() > right.size() ? right.size() : left.size()); k++){
-	  			double D_max = 279;
-				double D_min = 0;
-				double Normalizer_Left = 0;
-				double Normalizer_Right = 0;
-				double p_Left = 0;
-				double p_Right = 0;
-				double lambda = 0.005;
 
 				if(left.at(k).x > 0 && left.at(k).x < 280 && right.at(k).x > 0 && right.at(k).x < 280
 						&& left.at(k).y > 0 && left.at(k).y < 220 && right.at(k).y > 0 && right.at(k).y < 220){
-					
-					
+
+
 					D_Left =(double) NewFrame.GetLeftDistanceFrame().at<float>(left.at(k).x, left.at(k).y);
 					D_Right = (double) NewFrame.GetRightDistanceFrame().at<float>(right.at(k).x, right.at(k).y);
-		
-					
+
 					Normalizer_Left = 1/(1-exp(-lambda*D_max));
 					p_Left = Normalizer_Left*lambda*exp(-lambda*D_Left);
-					
+
 					Normalizer_Right = 1/(1-exp(-lambda*D_max));
 					p_Right = Normalizer_Right*lambda*exp(-lambda*D_Right);
-					
-					FilterParticlesWithCovariance.at(i).at(j).SetProb(p_Left + p_Right);
 
-					
-/*					std::cout << "D_Left     D_Right     NORM      p_Left      p_Right" << std::endl;
+					FilterParticlesWithCovariance.at(i).at(j).SetProb(0.5*p_Left + 0.5*p_Right);
+
+
+					/*					std::cout << "D_Left     D_Right     NORM      p_Left      p_Right" << std::endl;
 					std::cout << D_Left << "    " << D_Right  << "     " <<Normalizer_Left << "   " << p_Left  <<"   " << p_Right << std::endl;	*/
-								
+
 				}
-			}		
+			}	
+
 		}
+		left.clear();
+		right.clear();
 	}
 }
 
 void ParticleFilter::Resampling(){
+
+	//Sumatory of all the probabilities
+	double sum_w = 0;
+
+	for(int h = 0; h < nparticles; h++){
+		for(int j = 0; j < nn; j++){	
+			sum_w += FilterParticlesWithCovariance.at(h).at(j).GetProb();
+		}
+	}
 	
+	double M = 20; //Number of samples to draw
+	double r = static_cast<double> (rand())/(static_cast<double>(RAND_MAX)/(sum_w/M));	
+	int i = 0;
+	int j = 0;
+	double U,c;
 	
+	c = FilterParticlesWithCovariance.at(0).at(0).GetProb();
+
+	for(double m = 0; m < M; m++){
+
+		U = r + (m)*(sum_w/M);
+
+		while(U > c){
+
+			if(j == nn - 1){
+				i  = i + 1;
+				j = 0;
+			}
+			j = j+1;
+			c = c + FilterParticlesWithCovariance.at(i).at(j).GetProb(); 
+		
+		}
+	
+		std::cout << "Particle chosen: " << FilterParticlesWithCovariance.at(i).at(j).Getid()
+						<< "   with probability: " << FilterParticlesWithCovariance.at(i).at(j).GetProb()<<std::endl;
+		
+		FilterParticlesWithCovariance.at(i).at(j).Setid(m);
+		FilterParticles.push_back(FilterParticlesWithCovariance.at(i).at(j));
+
+	}
+	FilterParticlesWithCovariance.clear();
+
+	//Generate randomly the rest of particles
+
+	float x_min = 0; 		float x_max = 0.05;
+	float y_min = 0; 		float y_max = 0.05;
+	float z_min = 0; 		float z_max = 0.05;
+	float alpha_min = 0;	float alpha_max = 360;
+	float beta_min = 0; 	float beta_max = 360;
+	float gamma_min = 0; 	float gamma_max = 360;
+
+	//Randomly generation in the limits x,y,z,a,b,c
+	std::uniform_real_distribution<double> dis_x(x_min, x_max);
+	std::uniform_real_distribution<double> dis_y(y_min, y_max);
+	std::uniform_real_distribution<double> dis_z(z_min, z_max);
+	std::uniform_real_distribution<double> dis_alpha(alpha_min, alpha_max);
+	std::uniform_real_distribution<double> dis_beta(beta_min, beta_max);
+	std::uniform_real_distribution<double> dis_gamma(gamma_min, gamma_max);
+	
+	for(int h = M; h < nparticles; h++){
+
+		FilterParticles.push_back(Particle(dis_x(gen), dis_y(gen), dis_z(gen), dis_alpha(gen)*r, dis_beta(gen)*r, dis_gamma(gen)*r, h));
+	}
 }
 
 
@@ -216,10 +283,10 @@ Eigen::MatrixXd ParticleFilter::MultivariateGaussian(float x, float y, float z, 
 			* Eigen::MatrixXd::NullaryExpr(size,nn,randN)).colwise() 
 	                        		   + mean;
 
-//	std::cout << "Mean\n" << mean << std::endl;
-//	std::cout << "Covar\n" << covar << std::endl;
-//	std::cout << "Samples\n" << samples << std::endl;
-//	cout << "------------" << endl;
+/*	std::cout << "Mean\n" << mean << std::endl;
+	std::cout << "Covar\n" << covar << std::endl;
+	std::cout << "Samples\n" << samples << std::endl;
+	cout << "------------" << endl;*/
 	
 	return(samples);
 }

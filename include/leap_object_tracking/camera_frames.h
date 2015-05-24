@@ -34,9 +34,9 @@ private:
 public:
 	
 	//Constructors, and Destructor
-	CameraFrames(){}
-	CameraFrames(const CameraFrames&);
-	CameraFrames(const sensor_msgs::ImageConstPtr&, const sensor_msgs::ImageConstPtr&, const sensor_msgs::CameraInfoConstPtr&, const sensor_msgs::CameraInfoConstPtr&);
+	explicit CameraFrames(){}
+    CameraFrames(const CameraFrames&);
+	explicit CameraFrames(const sensor_msgs::ImageConstPtr&, const sensor_msgs::ImageConstPtr&, const sensor_msgs::CameraInfoConstPtr&, const sensor_msgs::CameraInfoConstPtr&);
 	~CameraFrames(){};
 
 	//operator

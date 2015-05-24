@@ -38,13 +38,13 @@ private:
 	int nparticles;
 	
 	//Gaussian distribution parameters
-	int nn = 5;     // How many samples (columns) to draw
-	int size = 6; // Dimensionality (rows)
+	int nn;     // How many samples (columns) to draw
+	int size; // Dimensionality (rows)
 		
 public:
 	
 	//Constructor and Destructor
-	ParticleFilter(){}
+	explicit ParticleFilter(): nn(5), size(6){}
 	~ParticleFilter(){}
 	
 	//SetMethods

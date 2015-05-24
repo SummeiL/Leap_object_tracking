@@ -27,7 +27,7 @@ private:
 public:
 
 	//Constructor and Destructor
-	Models(){}
+	explicit Models(){}
 	~Models(){}
 
 	//Get and Set Methods

@@ -29,23 +29,10 @@ private:
 public:
 
 	//Constructors and Destructor
-	Particle(){ 
-		x = 0; y = 0; z = 0;
-		alpha = 0; beta = 0; gamma = 0;
-		id = -1;
-		prob = 0;
-	}
+	explicit Particle() : x(0), y(0), z(0), alpha(0), beta(0), gamma(0), id(-1), prob(0){ }
 
-	Particle(float x, float y, float z, float alpha, float beta, float gamma, float id){
-
-		this->x = x;
-		this->y = y;
-		this->z = z;
-		this->alpha = alpha;
-		this->beta = beta;
-		this->gamma = gamma;
-		this->id = id;
-	}
+	explicit Particle(const float& x, const float& y, const float& z, const float& alpha, const float& beta, const float& gamma, const float &id) 
+	: x(this->x), y(this->y), z(this->z), alpha(this->alpha), beta(this->beta), gamma(this->gamma), id(this->id){}
 
 	~Particle(){}
 

@@ -15,7 +15,7 @@
 //////////////////////////////////////////////////////////////////
 
 
-StereoCamera::StereoCamera(CameraFrames camFrames){
+StereoCamera::StereoCamera(const CameraFrames& camFrames){
 
 	Frames = camFrames;
 	
@@ -123,12 +123,11 @@ void StereoCamera::ProjectToCameraPlane(std::vector<cv::Point3f> cloud){
 	A(2,3) = Frames.GetLeftInfo()->P[11];
 
 	//Find the Homography Matrix that relates left to right camera plane
+	
 	FindHomography();
-
+	
 	if (!H.isZero(0.000000)){
-
 		for(int i = 0; i < cloud.size(); i++){
-
 			cv::Point2f aux_l, aux_r;
 
 			//Store the 3D point in a vector and convert it to Homogeneus coordinates [X Y Z 1]
@@ -163,6 +162,6 @@ void StereoCamera::ProjectToCameraPlane(std::vector<cv::Point3f> cloud){
 			}
 		}
 	}else std::cerr << "ERROR: Can not find Homography" <<std::endl;
-	
+
 }
 

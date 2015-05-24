@@ -32,8 +32,8 @@ class StereoCamera{
  public:
 	
 	//Constructors and Destructor
-	StereoCamera(){ }
-	StereoCamera(CameraFrames);
+	explicit StereoCamera(){}
+	explicit StereoCamera(const CameraFrames&);
 	StereoCamera(const StereoCamera&);
 	~StereoCamera(){}
 	

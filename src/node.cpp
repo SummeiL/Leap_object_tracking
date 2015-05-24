@@ -17,6 +17,7 @@
 #include <dynamic_reconfigure/server.h>
 #include <leap_object_tracking/nodeConfig.h>
 
+
 //PCL
 #include "pcl_ros/point_cloud.h"
 
@@ -99,10 +100,19 @@ void ImagesCallback(const sensor_msgs::ImageConstPtr& imageLeft,
 
 
 	}else{
-
+		
+		
 		//Adquire frames and apply edge detector
 		New_Frames = CameraFrames(imageLeft, imageRight, leftInfo, rightInfo);
 		New_Frames.EdgeDetector();
+		
+		//Show camera output
+		New_Frames.Show_LeftCam();
+		New_Frames.Show_RightCam();
+
+		//Shows edge detector output
+		New_Frames.Show_LeftDistanceFrame();
+		New_Frames.Show_RightDistanceFrame();
 
 		//Create Camera Model for the frames
 		CameraModelNew = StereoCamera(New_Frames);
@@ -114,21 +124,16 @@ void ImagesCallback(const sensor_msgs::ImageConstPtr& imageLeft,
 		
 		//Motion Model
 		Filter.MotionModel();
-		
+	
 		//Measurement Model
-		Filter.MeasurementModel();
+		Filter.MeasurementModel();		
+
+		//Resampling
+		Filter.Resampling();
 
 		//Cope new to old for the next iteration
 		Old_Frames = New_Frames;
 		CameraModelOld = CameraModelNew;
-
-		//Show camera output
-		New_Frames.Show_LeftCam();
-		New_Frames.Show_RightCam();
-
-		//Shows edge detector output
-		New_Frames.Show_LeftDistanceFrame();
-		New_Frames.Show_RightDistanceFrame();
 
 	}
 	//pub_PFCloud.publish(c.Get_PointCloud());//Uncoment this line for pusblish the cloud of the model
