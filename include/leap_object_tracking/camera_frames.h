@@ -13,7 +13,10 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <sensor_msgs/CameraInfo.h>
 #include <highgui.h>
+#include <Eigen/Eigen>
+#include <opencv2/core/eigen.hpp>
 
+#include <leap_object_tracking/feature_detection.h>
 
 class CameraFrames{
 
@@ -25,6 +28,8 @@ private:
 	cv::Mat RightDistanceFrame;
 	sensor_msgs::CameraInfoConstPtr leftCamInfo; 
 	sensor_msgs::CameraInfoConstPtr rightCamInfo;
+	
+	Eigen::MatrixXf H;
 	
 	//Configuration parameters of the edge detector
 	int lowThreshold ;
@@ -52,6 +57,8 @@ public:
 	const sensor_msgs::CameraInfoConstPtr GetLeftInfo(){ return leftCamInfo; }
 	const sensor_msgs::CameraInfoConstPtr GetRightInfo(){ return rightCamInfo; }
 	
+	Eigen::MatrixXf GetHomography(){ return H;}
+	
 	void SetCannyParameters(int lowThreshold, int ratio, int kernel_size){
 		
 		this->lowThreshold = lowThreshold;
@@ -62,6 +69,7 @@ public:
 
 	//Methods for the adquired images
 	void EdgeDetector();
+	void Homography();
 
 	void Show_LeftCam();
 	void Show_RightCam();

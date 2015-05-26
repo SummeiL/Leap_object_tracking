@@ -36,7 +36,7 @@ private:
 public:
 	
 	explicit detectFeatures(){}
-	explicit detectFeatures(CameraFrames);
+	explicit detectFeatures(const cv::Mat& left, const cv::Mat& right) : first(left), second(right){}
 	virtual ~detectFeatures() {}
 
 	std::vector<cv::KeyPoint>GetFirstKeyPoints(){ return keypointsFirst;}

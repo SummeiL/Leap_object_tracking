@@ -23,8 +23,6 @@ class StereoCamera{
 
 	CameraFrames Frames;
 	image_geometry::StereoCameraModel camModel;
-	
-	Eigen::MatrixXf H;
 
 	std::vector<cv::Point2f> modelpoints2dleft;
 	std::vector<cv::Point2f> modelpoints2dright;
@@ -47,7 +45,6 @@ class StereoCamera{
 
 	//Methods for computing transformations on the images
 	void Camera_Model();
-	void FindHomography();
 	void ProjectToCameraPlane(std::vector<cv::Point3f>);	
 };
 

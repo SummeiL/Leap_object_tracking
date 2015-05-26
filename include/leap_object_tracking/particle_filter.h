@@ -34,7 +34,7 @@ private:
 	
 	std::vector<cv::Point2d> ModelInCameraPlane;
 	std::vector<Particle> FilterParticles;
-	std::vector<std::vector<Particle> > FilterParticlesWithCovariance;
+	std::vector<Particle> FilterParticlesWithCovariance;
 	int nparticles;
 	
 	//Gaussian distribution parameters

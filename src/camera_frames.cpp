@@ -9,6 +9,8 @@
 
 #include <leap_object_tracking/camera_frames.h>
 
+#include "opencv2/calib3d/calib3d.hpp"
+
 
 
 //////////////////////////////////////////////////////////////////
@@ -77,6 +79,7 @@ CameraFrames& CameraFrames::operator = (const CameraFrames &f){
 		this->lowThreshold = f.lowThreshold;
 		this->ratio = f.ratio;
 		this->kernel_size = f.kernel_size;
+		this->H = f.H;
 	}	
 }
 
@@ -153,4 +156,48 @@ void CameraFrames::EdgeDetector(){
 
 
 }
+/*
+	Computes the Homography matrix with keypoint detectors
+ */
+
+void CameraFrames::Homography(){
+
+	std::vector<cv::Point2f> left;
+	std::vector<cv::Point2f> right;
+
+	detectFeatures detect(LeftFrame, RightFrame);
+
+	//Detect Keypoints in both images left/right
+	detect.FAST_Detector();
+
+	//Extract Features from the keypoints left/right
+	detect.SURF_Extractor();
+
+	//Match the keypoints of the two images
+	detect.BruteForce_Matcher();
+
+	for(int i = 0; i < detect.GetGoodMatches().size(); i++){
+
+		left.push_back(detect.GetMatchedPoint(i, 1));
+		right.push_back(detect.GetMatchedPoint(i, 2));		
+
+	}
+	
+	detect.Draw_GoodMatches();
+
+	//findHomography needs at least 4 points to comput it, and almost 10 to be accurate
+	if(left.size() < 4 || right.size() < 4){
+
+		H.setZero();
+
+	}else{
+		
+		//Compute the Homography image between left and right images
+		cv::Mat_<float> H_aux =  cv::findHomography(left, right, CV_RANSAC);
+		
+		//Transform it to Eigen Matrix
+		cv::cv2eigen(H_aux, H);
+	}
+}
+
 

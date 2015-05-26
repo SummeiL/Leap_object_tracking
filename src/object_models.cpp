@@ -84,38 +84,38 @@ void Models::Cube(double side, cv::Point3f O){
 
 
 void Models::Cylinder(Particle p, float radius, float heigth){
-	
+
 	ModelPoints.clear();
-	
+
 	float step_a= (2*M_PI)/18;
 	float step_h = heigth/25;
+	cv::Point3f aux(0,0,0);
 
-	for(float h = 0; h < heigth; h+=step_h)
-		
+	for(float h = 0; h < heigth; h+=step_h){	
 		for(float i = 0; i < 2*M_PI  ; i+=step_a){
-
-			cv::Point3f aux(0,0,0);
+			
 
 			if(h == 0 || (h < heigth + 0.001 && h > heigth - 0.001)){
-				
+
 				aux.x = radius*cos(i);
 				aux.y = radius*sin(i);
 				aux.z = h;
 				aux = Transform(aux,p);
-				
+
 				ModelPoints.push_back(aux);
 			}
 			if((sqrt(pow(radius*cos(i),2)+pow(radius*sin(i),2)) < radius+0.0005 
 					&& sqrt(pow(radius*cos(i),2)+pow(radius*sin(i),2)) > radius-0.0005 ) 
 					&& h != 0 && !(h < heigth + 0.01 && h > heigth + 0.01)){
-				
+
 				aux.x = radius*cos(i);
 				aux.y = radius*sin(i);
 				aux.z = h;
 				aux = Transform(aux,p);
-				
+
 				ModelPoints.push_back(aux);
 			}
 		}
-	//std::cout << " points: " <<  ModelPoints.size() << std::endl;
+		//std::cout << " points: " <<  ModelPoints.size() << std::endl;
+	}
 }

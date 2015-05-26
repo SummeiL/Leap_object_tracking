@@ -46,53 +46,6 @@ void StereoCamera::Camera_Model(){
 
 }
 
-/*
-	Computes the Homography matrix with keypoint detectors
- */
-
-void StereoCamera::FindHomography(){
-
-	std::vector<cv::Point2f> left;
-	std::vector<cv::Point2f> right;
-
-	detectFeatures detect(Frames);
-
-	//Detect Keypoints in both images left/right
-	detect.FAST_Detector();
-
-	//Extract Features from the keypoints left/right
-	detect.SURF_Extractor();
-
-	//Match the keypoints of the two images
-	detect.BruteForce_Matcher();
-
-	//std::cout<< detect.GetGoodMatches().size() <<std::endl;
-
-	for(int i = 0; i < detect.GetGoodMatches().size(); i++){
-
-		left.push_back(detect.GetMatchedPoint(i, 1));
-		right.push_back(detect.GetMatchedPoint(i, 2));		
-
-	}
-	
-	detect.Draw_GoodMatches();
-
-	//findHomography needs at least 4 points to comput it, and almost 10 to be accurate
-	if(left.size() < 10 || right.size() < 10){
-
-		H.setZero();
-
-	}else{
-		
-		//Compute the Homography image between left and right images
-		cv::Mat_<float> H_aux;
-		H_aux = cv::findHomography(left, right, CV_RANSAC);
-		
-		//Transform it to Eigen Matrix
-		cv::cv2eigen(H_aux, H);
-	}
-}
-
 
 /*
 	Projects the points in the left and right plane of the camera
@@ -124,9 +77,9 @@ void StereoCamera::ProjectToCameraPlane(std::vector<cv::Point3f> cloud){
 
 	//Find the Homography Matrix that relates left to right camera plane
 	
-	FindHomography();
 	
-	if (!H.isZero(0.000000)){
+	
+	if (!Frames.GetHomography().isZero(0.000000)){
 		for(int i = 0; i < cloud.size(); i++){
 			cv::Point2f aux_l, aux_r;
 
@@ -143,7 +96,7 @@ void StereoCamera::ProjectToCameraPlane(std::vector<cv::Point3f> cloud){
 			  using the Homography matrix : [u v w]_right = H*[u v w]_left.
 			  Matrix Dimensions: [3x1] = [3x3] * [3x1]                               */
 
-			Point2dimensions_right = H*Point2dimensions_left;  
+			Point2dimensions_right = Frames.GetHomography()*Point2dimensions_left;  
 
 			if(Point2dimensions_left(2) != 0 && Point2dimensions_right(2) != 0){
 

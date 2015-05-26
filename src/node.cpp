@@ -86,6 +86,7 @@ void ImagesCallback(const sensor_msgs::ImageConstPtr& imageLeft,
 		//Adquire frames and apply edge detector
 		Old_Frames = CameraFrames(imageLeft, imageRight, leftInfo, rightInfo);
 		Old_Frames.EdgeDetector();
+		Old_Frames.Homography();
 
 		//Create Camera Model for the frames
 		CameraModelOld = StereoCamera(Old_Frames);
@@ -105,6 +106,7 @@ void ImagesCallback(const sensor_msgs::ImageConstPtr& imageLeft,
 		//Adquire frames and apply edge detector
 		New_Frames = CameraFrames(imageLeft, imageRight, leftInfo, rightInfo);
 		New_Frames.EdgeDetector();
+		New_Frames.Homography();
 		
 		//Show camera output
 		New_Frames.Show_LeftCam();

@@ -35,11 +35,6 @@
 using namespace std;
 using namespace cv;
 
-detectFeatures::detectFeatures(CameraFrames camframe){
-
-	first = camframe.GetLeftFrame();
-	second = camframe.GetRightFrame();	
-}
 
 
 
