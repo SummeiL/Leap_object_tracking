@@ -14,7 +14,6 @@
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/normal_distribution.hpp>
 #include <leap_object_tracking/camera_frames.h>
-#include <leap_object_tracking/stereo_camera.h>
 #include <leap_object_tracking/object_models.h>
 #include <leap_object_tracking/particle.h>
 
@@ -29,10 +28,7 @@ class ParticleFilter{
 
 private:
 	
-	CameraFrames NewFrame;
-	StereoCamera NewcamModel;
-	
-	std::vector<cv::Point2d> ModelInCameraPlane;
+	std::vector<cv::Point2d> ModelInCameraPlane; 
 	std::vector<Particle> FilterParticles;
 	std::vector<Particle> FilterParticlesWithCovariance;
 	int nparticles;
@@ -40,6 +36,7 @@ private:
 	//Gaussian distribution parameters
 	int nn;     // How many samples (columns) to draw
 	int size; // Dimensionality (rows)
+
 		
 public:
 	
@@ -49,14 +46,13 @@ public:
 	
 	//SetMethods
 	void Set_nparticles(int nparticles){ this->nparticles = nparticles;}
-	void Set_NewFrame(CameraFrames NewFrame){this->NewFrame = NewFrame;}
-	void Set_NewCamModel(StereoCamera NewcamModel){this->NewcamModel = NewcamModel;}
-	
+
 	//Particle Filter Steps and functions
 	void InitializePF();
 	void MotionModel();
-	void MeasurementModel();
+	void MeasurementModel_A(CameraFrames);
 	void Resampling();
+	void Statistics();
 	
 	Eigen::MatrixXd MultivariateGaussian(float, float, float, float, float, float);
 };

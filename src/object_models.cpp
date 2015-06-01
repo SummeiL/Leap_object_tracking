@@ -50,9 +50,9 @@ cv::Point3f Models::Transform(cv::Point3f pointmodel, Particle parti){
 
 	//Construction of the Rotation matrix 3x3 with the orientation of the point	
 	rotationMatrix =  Eigen::AngleAxisf(parti.GetAlpha(), Eigen::Vector3f::UnitX())
-	* Eigen::AngleAxisf(parti.GetBeta(),  Eigen::Vector3f::UnitY())
-	* Eigen::AngleAxisf(parti.GetGamma(), Eigen::Vector3f::UnitZ());
-
+					* Eigen::AngleAxisf(parti.GetBeta(),  Eigen::Vector3f::UnitY())
+					* Eigen::AngleAxisf(parti.GetGamma(), Eigen::Vector3f::UnitZ());
+	
 	//Construction of the translation vector 3x1 with the pose of the point
 	Eigen::MatrixXf translation(3,1);
 	translation << parti.GetX(), parti.GetY(), parti.GetZ();
@@ -69,7 +69,7 @@ cv::Point3f Models::Transform(cv::Point3f pointmodel, Particle parti){
 	transformedpoint.x = aux_m2(0);
 	transformedpoint.y = aux_m2(1);
 	transformedpoint.z = aux_m2(2);
-
+	
 	return transformedpoint;
 }
 
@@ -77,12 +77,92 @@ cv::Point3f Models::Transform(cv::Point3f pointmodel, Particle parti){
 	Functions to generate the 3D Models
  */
 
-void Models::Cube(double side, cv::Point3f O){
-	//To do
+void Models::Cube(float side, Particle p){
+	
+	ModelPoints.clear();
+	cv::Point3f aux(0,0,0);
 
+	float step = side/10;
+	float dif = 0.000000001;
+
+	for(float i = -side/2; i <= side/2; i+=step){
+		for(float j = -side/2; j <= side/2; j+=step){
+			for(float k = 0; k <= side+step; k+=step){
+
+				if(k == 0 || k > side+dif ){
+
+					if(j == side/2 || j == -side/2){
+						
+						aux.x = i;
+						aux.y = j;
+						aux.z = k;
+						aux = Transform(aux,p);
+						ModelPoints.push_back(aux);
+
+						aux.x = i;
+						aux.y = -j;
+						aux.z = k;
+						aux = Transform(aux,p);
+						ModelPoints.push_back(aux);
+
+					}
+
+					if(i == side/2 || i == -side/2){
+
+						aux.x = i;
+						aux.y = j;
+						aux.z = k;
+						aux = Transform(aux,p);
+						ModelPoints.push_back(aux);
+
+						aux.x = -i;
+						aux.y = j;
+						aux.z = k;
+						aux = Transform(aux,p);
+						ModelPoints.push_back(aux);
+					}
+				}else{
+
+					if(i == side/2 && j == side/2){
+
+						aux.x = i;
+						aux.y = j;
+						aux.z = k;
+						aux = Transform(aux,p);
+						ModelPoints.push_back(aux);
+
+						aux.x = -i;
+						aux.y = -j;
+						aux.z = k;
+						aux = Transform(aux,p);
+						ModelPoints.push_back(aux);
+					}
+
+					if(i == -side/2 && j == side/2){
+
+						aux.x = i;
+						aux.y = j;
+						aux.z = k;
+						aux = Transform(aux,p);
+						ModelPoints.push_back(aux);
+
+						aux.x = -i;
+						aux.y = -j;
+						aux.z = k;
+						aux = Transform(aux,p);
+						ModelPoints.push_back(aux);
+
+
+					}
+
+				}
+
+
+			}
+		}
+	}
+	
 }
-
-
 void Models::Cylinder(Particle p, float radius, float heigth){
 
 	ModelPoints.clear();

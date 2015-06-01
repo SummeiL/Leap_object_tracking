@@ -14,7 +14,6 @@
 #include <message_filters/sync_policies/approximate_time.h>
 #include "camera_info_manager/camera_info_manager.h"
 #include <tf/transform_broadcaster.h>
-#include <dynamic_reconfigure/server.h>
 #include <leap_object_tracking/nodeConfig.h>
 
 
@@ -34,7 +33,6 @@
 
 //Catkin
 #include <leap_object_tracking/leap_camera.h>
-#include <leap_object_tracking/stereo_camera.h>
 #include <leap_object_tracking/camera_frames.h>
 #include <leap_object_tracking/particle_filter.h>
 #include <leap_object_tracking/object_models.h>
@@ -47,15 +45,7 @@
 
 static bool first_time = true;
 ros::Publisher pub_PFCloud;
-
-CameraFrames Old_Frames;
-CameraFrames New_Frames;
  
-StereoCamera CameraModelOld;
-StereoCamera CameraModelNew;
-
-
-//Models c; //Uncoment this line for pusblish the cloud of the model
 ParticleFilter Filter;
 
 /*
@@ -63,9 +53,9 @@ ParticleFilter Filter;
 */
 
 void ImagesCallback(const sensor_msgs::ImageConstPtr& imageLeft, 
-		const sensor_msgs::ImageConstPtr& imageRight, 
-		const sensor_msgs::CameraInfoConstPtr& leftInfo, 
-		const sensor_msgs::CameraInfoConstPtr& rightInfo){
+					const sensor_msgs::ImageConstPtr& imageRight, 
+					const sensor_msgs::CameraInfoConstPtr& leftInfo, 
+					const sensor_msgs::CameraInfoConstPtr& rightInfo){
 
 	//Frame of the camera = same position as world
 	static tf::TransformBroadcaster br;
@@ -82,16 +72,7 @@ void ImagesCallback(const sensor_msgs::ImageConstPtr& imageLeft,
 
 	//This will be used for the first iterarion
 	if(first_time){
-
-		//Adquire frames and apply edge detector
-		Old_Frames = CameraFrames(imageLeft, imageRight, leftInfo, rightInfo);
-		Old_Frames.EdgeDetector();
-		Old_Frames.Homography();
-
-		//Create Camera Model for the frames
-		CameraModelOld = StereoCamera(Old_Frames);
-		CameraModelOld.Camera_Model();
-
+		
 		//Set Filter Parameters and Initialize it
 		Filter.Set_nparticles(100);
 		Filter.InitializePF();
@@ -102,9 +83,8 @@ void ImagesCallback(const sensor_msgs::ImageConstPtr& imageLeft,
 
 	}else{
 		
-		
 		//Adquire frames and apply edge detector
-		New_Frames = CameraFrames(imageLeft, imageRight, leftInfo, rightInfo);
+		CameraFrames New_Frames(imageLeft, imageRight, leftInfo, rightInfo);
 		New_Frames.EdgeDetector();
 		New_Frames.Homography();
 		
@@ -116,48 +96,32 @@ void ImagesCallback(const sensor_msgs::ImageConstPtr& imageLeft,
 		New_Frames.Show_LeftDistanceFrame();
 		New_Frames.Show_RightDistanceFrame();
 
-		//Create Camera Model for the frames
-		CameraModelNew = StereoCamera(New_Frames);
-		CameraModelNew.Camera_Model();
-
-		// Set Particle Filter values
-		Filter.Set_NewFrame(New_Frames);
-		Filter.Set_NewCamModel(CameraModelNew);
-		
 		//Motion Model
 		Filter.MotionModel();
 	
 		//Measurement Model
-		Filter.MeasurementModel();		
-
+		Filter.MeasurementModel_A(New_Frames);
+		
 		//Resampling
 		Filter.Resampling();
+		
+		//Compute statistics
+		Filter.Statistics();
 
-		//Cope new to old for the next iteration
-		Old_Frames = New_Frames;
-		CameraModelOld = CameraModelNew;
 
 	}
-	//pub_PFCloud.publish(c.Get_PointCloud());//Uncoment this line for pusblish the cloud of the model
+
+	//pub_PFCloud.publish(model.Get_PointCloud());//Uncoment this line for publish the cloud of the model
 
 }
 
-void configCallback(leap_object_tracking::nodeConfig &config, uint32_t level)
-{
-	//p.SetCannyParameters(config.Threshold, config.Ratio, config.Kernel_size);
-	
 
-} 
 
 int main(int argc, char** argv) {
 
 	ros::init(argc, argv, "node");
 	ros::NodeHandle nh;
-	dynamic_reconfigure::Server<leap_object_tracking::nodeConfig> server;
-	dynamic_reconfigure::Server<leap_object_tracking::nodeConfig>::CallbackType f;
-	
-	f = boost::bind(&configCallback, _1, _2);
-	server.setCallback(f);
+
 /*
 
 	//Create a sample listener and controller

@@ -29,12 +29,13 @@ private:
 	sensor_msgs::CameraInfoConstPtr leftCamInfo; 
 	sensor_msgs::CameraInfoConstPtr rightCamInfo;
 	
+	std::vector<cv::Point2f> modelpoints2dleft;
+	std::vector<cv::Point2f> modelpoints2dright;
+	
 	Eigen::MatrixXf H;
 	
 	//Configuration parameters of the edge detector
-	int lowThreshold ;
-	int ratio ;
-	int kernel_size;
+
 
 public:
 	
@@ -58,18 +59,14 @@ public:
 	const sensor_msgs::CameraInfoConstPtr GetRightInfo(){ return rightCamInfo; }
 	
 	Eigen::MatrixXf GetHomography(){ return H;}
-	
-	void SetCannyParameters(int lowThreshold, int ratio, int kernel_size){
-		
-		this->lowThreshold = lowThreshold;
-		this->ratio = ratio;
-		this->kernel_size = kernel_size;
-		
-	}
+	std::vector<cv::Point2f> GetProjectedModelPointsLeft(){return modelpoints2dleft;}
+	std::vector<cv::Point2f> GetProjectedModelPointsRight(){return modelpoints2dright;}
+
 
 	//Methods for the adquired images
 	void EdgeDetector();
 	void Homography();
+	void ProjectToCameraPlane(std::vector<cv::Point3f> cloud);
 
 	void Show_LeftCam();
 	void Show_RightCam();

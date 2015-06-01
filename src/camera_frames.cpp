@@ -53,11 +53,6 @@ CameraFrames::CameraFrames(const sensor_msgs::ImageConstPtr& Left,
 
 	LeftFrame = bridgeLeft->image;
 	RightFrame = bridgeRight->image;
-	
-    lowThreshold = 100;
-	ratio = 2;
-	kernel_size = 3;
-
 }
 
 CameraFrames::CameraFrames(const CameraFrames &f){
@@ -76,9 +71,6 @@ CameraFrames& CameraFrames::operator = (const CameraFrames &f){
 		this->rightCamInfo = f.rightCamInfo;
 		this->LeftDistanceFrame = f.LeftDistanceFrame;
 		this->RightDistanceFrame = f.RightDistanceFrame;
-		this->lowThreshold = f.lowThreshold;
-		this->ratio = f.ratio;
-		this->kernel_size = f.kernel_size;
 		this->H = f.H;
 	}	
 }
@@ -125,8 +117,9 @@ void CameraFrames::EdgeDetector(){
 	cv::Point2d point_aux_l;
 	cv::Point2d point_aux_r;
 	
-	double minVal;
-	double maxVal;
+	int lowThreshold = 100;
+	int ratio = 2;
+	int kernel_size = 3;
 
 	cv::Mat dst_left, dst_right;
 	cv::Mat LeftCannyFrame;
@@ -139,9 +132,6 @@ void CameraFrames::EdgeDetector(){
 	/// Canny detector Ouput 
 	cv::Canny( LeftCannyFrame, LeftCannyFrame, lowThreshold, lowThreshold*ratio, kernel_size, true );	  
 	cv::Canny( RightCannyFrame, RightCannyFrame, lowThreshold, lowThreshold*ratio, kernel_size, true );
-	
-	cv::imshow("Left Canny Image",LeftCannyFrame );
-	cv::waitKey(1);
 
 	//Threshold to normalize to 1/0 binary image
 	cv::threshold(LeftCannyFrame, dst_left, 254, 1, cv::THRESH_BINARY_INV);
@@ -151,11 +141,8 @@ void CameraFrames::EdgeDetector(){
 	cv::distanceTransform(dst_left, LeftDistanceFrame, CV_DIST_L2, CV_DIST_MASK_PRECISE);
 	cv::distanceTransform(dst_right, RightDistanceFrame, CV_DIST_L2, CV_DIST_MASK_PRECISE);
 	
-	
-
-
-
 }
+
 /*
 	Computes the Homography matrix with keypoint detectors
  */
@@ -200,4 +187,82 @@ void CameraFrames::Homography(){
 	}
 }
 
+void CameraFrames::ProjectToCameraPlane(std::vector<cv::Point3f> cloud){
+
+	Eigen::MatrixXf A(3,4);
+	Eigen::MatrixXf Point2dimensions_right(1,3);
+	Eigen::MatrixXf Point3dimensions_left(1,4);
+	Eigen::MatrixXf Point2dimensions_left(1,3);
+
+	modelpoints2dright.clear();
+	modelpoints2dleft.clear();
+
+	//Construct the Projection Matrix of the Left Camera
+	A(0,0) = leftCamInfo->P[0];
+	A(0,1) = leftCamInfo->P[1];
+	A(0,2) = leftCamInfo->P[2];
+	A(0,3) = leftCamInfo->P[3];
+	A(1,0) = leftCamInfo->P[4];
+	A(1,1) = leftCamInfo->P[5];
+	A(1,2) = leftCamInfo->P[6];
+	A(1,3) = leftCamInfo->P[7];
+	A(2,0) = leftCamInfo->P[8];
+	A(2,1) = leftCamInfo->P[9];
+	A(2,2) = leftCamInfo->P[10];
+	A(2,3) = leftCamInfo->P[11];
+	//std::cout << A << std::endl;
+
+	if (!H.isZero(0.000000)){
+		
+		for(int i = 0; i < cloud.size(); i++){
+			cv::Point2f aux_l(0,0);
+			cv::Point2f aux_r(0,0);
+			
+			//Store the 3D point in a vector and convert it to Homogeneus coordinates [X Y Z 1]
+			//The Projection matrix projects points in the camera frame. The point is generated
+			//in the real world so it need to be translated to the leftcameraframe.
+			Point3dimensions_left <<  cloud.at(i).x , cloud.at(i).y, cloud.at(i).z, 1;
+			
+			/*Project the 3D point onto the Left camera plane [u v w]_left = ProjMat * [X Y Z 1]'
+			  Matrix Dimensions:[3x1] = [3x4] * [1x4]'.                                       */
+			Point2dimensions_left = A*Point3dimensions_left.transpose();
+			
+			
+			//Divide by the Homogeneous coordinate to obtain the [X_left, Y_left]
+			aux_l.x = Point2dimensions_left(0)/Point2dimensions_left(2);
+			aux_l.y = Point2dimensions_left(1)/Point2dimensions_left(2);
+
+			Point2dimensions_left(0) = aux_l.x;
+			Point2dimensions_left(1) = aux_l.y;
+			Point2dimensions_left(2) = 1;
+
+			/*Transform the point from the left camera view to the right camera view
+				  using the Homography matrix : [u v w]_right = H*[u v w]_left.
+				  Matrix Dimensions: [3x1] = [3x3] * [3x1]   	    */
+
+			Point2dimensions_right = H*Point2dimensions_left; 
+			//std::cout << Point2dimensions_right << std::endl;
+
+			//Divide by the Homogeneous coordinate to obtain the [X_right, Y_right]
+			aux_r.x = Point2dimensions_right(0)/Point2dimensions_right(2);
+			aux_r.y = Point2dimensions_right(1)/Point2dimensions_right(2);
+
+
+			/*						std::cout << "Right: " << aux_r.x << "  " << aux_r.y <<std::endl;
+				std::cout << "Left: " << aux_l.x << "  " << aux_l.y <<std::endl;*/
+
+			if(aux_l.x < 140 && aux_l.x >-140 && aux_r.x < 140 && aux_r.x > -140 && aux_l.y < 110 && aux_l.y > -110 && aux_r.y < 110 && aux_r.y >-110 ){
+				modelpoints2dleft.push_back(aux_l);
+				modelpoints2dright.push_back(aux_r);
+			}else {							
+
+				//std::cout << aux_l.x << std::endl;
+				/*					std::cout << aux_l << std::endl;
+					std::cout << aux_r << std::endl;*/
+				//std::cout << "--------" << std::endl;
+			}
+		}
+	}else std::cerr << "ERROR: Can not find Homography" <<std::endl;
+
+}
 

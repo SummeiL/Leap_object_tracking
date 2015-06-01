@@ -36,7 +36,7 @@ public:
 	std::vector<cv::Point3f> Get_ModelPoints(){return ModelPoints;}
 
 	//Methods to construct and transform the 3D objects
-	void Cube(double, cv::Point3f);
+	void Cube(float, Particle);
 	void Cylinder(Particle, float, float);
 	void GenerateModelCloud();
 	cv::Point3f Transform(cv::Point3f, Particle);
