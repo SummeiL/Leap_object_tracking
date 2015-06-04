@@ -72,6 +72,8 @@ void ParticleFilter::InitializePF(){
 		FilterParticles.push_back(Particle(dis_x(gen), dis_y(gen), dis_z(gen), dis_alpha(gen), dis_beta(gen), dis_gamma(gen), n));
 
 	}
+	//Generate the 3D Model
+	model.Cube(0.04);
 }
 
 /*
@@ -116,7 +118,7 @@ void ParticleFilter::MotionModel(){
 
 void ParticleFilter::MeasurementModel_A(CameraFrames NewFrame){
 
-	Models model;
+
 	std::vector<cv::Point2f> left;
 	std::vector<cv::Point2f> right;
 
@@ -131,13 +133,12 @@ void ParticleFilter::MeasurementModel_A(CameraFrames NewFrame){
 
 	for(int  i = 0; i < FilterParticlesWithCovariance.size(); i++){
 
-		model.Cube(0.04, FilterParticlesWithCovariance.at(i));
 
-		NewFrame.ProjectToCameraPlane(model.Get_ModelPoints());
+		NewFrame.ProjectToCameraPlane(model.Transform(FilterParticlesWithCovariance.at(i)));
 
 		left = NewFrame.GetProjectedModelPointsLeft();
 		right = NewFrame.GetProjectedModelPointsRight();
-		
+
 		if(left.size()==0){
 			a++;
 		}
@@ -318,6 +319,7 @@ void ParticleFilter::Statistics(){
 	Eigen::MatrixXf u = Eigen::MatrixXf::Ones(1,20);
 	Covariance = (1/20-1)*(SampleMatrix-Mean*u)*(SampleMatrix-Mean*u).transpose();
 	
-	std::cout << Covariance << std::endl;
+	//std::cout << Covariance << std::endl;
+
 }
 

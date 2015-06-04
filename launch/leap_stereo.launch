@@ -4,7 +4,12 @@
 	<node pkg="leap_object_tracking"
 	 type="node"
 	 name="camera_node" 
-	 output="screen"
-	/>
+	 output="screen"/>
+	
+	<node pkg="stereo_image_proc"
+	 type="stereo_image_proc"
+	 name="stereo_image_proc"
+	 respawn="false" 
+	 args="_approximate_sync:=True" />
   </group>
 </launch>

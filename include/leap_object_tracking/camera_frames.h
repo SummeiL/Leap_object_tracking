@@ -66,7 +66,7 @@ public:
 	//Methods for the adquired images
 	void EdgeDetector();
 	void Homography();
-	void ProjectToCameraPlane(std::vector<cv::Point3f> cloud);
+	void ProjectToCameraPlane(Eigen::MatrixXf cloud);
 
 	void Show_LeftCam();
 	void Show_RightCam();

@@ -71,7 +71,7 @@ void ImagesCallback(const sensor_msgs::ImageConstPtr& imageLeft,
 	br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", "leap_optical_frame"));
 
 	//This will be used for the first iterarion
-	if(first_time){
+	if(first_time){ 
 		
 		//Set Filter Parameters and Initialize it
 		Filter.Set_nparticles(100);
@@ -137,8 +137,8 @@ int main(int argc, char** argv) {
 	pub_PFCloud = nh.advertise<pcl::PointCloud<pcl::PointXYZ> >("/leap_object_tracking/PFPointCloud",1);
 
 	//Aprroximate synchronization of the images from both cameras for the callback
-	message_filters::Subscriber<sensor_msgs::Image> imageLeft_sub(nh, "/leap_object_tracking/left/image_raw",1);
-	message_filters::Subscriber<sensor_msgs::Image> imageRight_sub(nh, "/leap_object_tracking/right/image_raw",1);
+	message_filters::Subscriber<sensor_msgs::Image> imageLeft_sub(nh, "/leap_object_tracking/left/image_rect",1);
+	message_filters::Subscriber<sensor_msgs::Image> imageRight_sub(nh, "/leap_object_tracking/right/image_rect",1);
 	message_filters::Subscriber<sensor_msgs::CameraInfo>infoLeft_sub(nh, "/leap_object_tracking/left/camera_info",1);
 	message_filters::Subscriber<sensor_msgs::CameraInfo>infoRight_sub(nh, "/leap_object_tracking/right/camera_info",1);
 

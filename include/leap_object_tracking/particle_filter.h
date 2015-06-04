@@ -32,6 +32,7 @@ private:
 	std::vector<Particle> FilterParticles;
 	std::vector<Particle> FilterParticlesWithCovariance;
 	int nparticles;
+	Models model;
 	
 	//Gaussian distribution parameters
 	int nn;     // How many samples (columns) to draw

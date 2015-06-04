@@ -187,7 +187,7 @@ void CameraFrames::Homography(){
 	}
 }
 
-void CameraFrames::ProjectToCameraPlane(std::vector<cv::Point3f> cloud){
+void CameraFrames::ProjectToCameraPlane(Eigen::MatrixXf cloud){
 
 	Eigen::MatrixXf A(3,4);
 	Eigen::MatrixXf Point2dimensions_right(1,3);
@@ -214,15 +214,16 @@ void CameraFrames::ProjectToCameraPlane(std::vector<cv::Point3f> cloud){
 
 	if (!H.isZero(0.000000)){
 		
-		for(int i = 0; i < cloud.size(); i++){
+		for(int i = 0; i < cloud.cols(); i++){
+			
 			cv::Point2f aux_l(0,0);
 			cv::Point2f aux_r(0,0);
 			
 			//Store the 3D point in a vector and convert it to Homogeneus coordinates [X Y Z 1]
 			//The Projection matrix projects points in the camera frame. The point is generated
-			//in the real world so it need to be translated to the leftcameraframe.
-			Point3dimensions_left <<  cloud.at(i).x , cloud.at(i).y, cloud.at(i).z, 1;
-			
+			//in the real world so it need to be translated to the leftcameraframe.			
+			Point3dimensions_left << cloud(0,i),cloud(1,i), cloud(2,i),1;
+	
 			/*Project the 3D point onto the Left camera plane [u v w]_left = ProjMat * [X Y Z 1]'
 			  Matrix Dimensions:[3x1] = [3x4] * [1x4]'.                                       */
 			Point2dimensions_left = A*Point3dimensions_left.transpose();
@@ -248,14 +249,13 @@ void CameraFrames::ProjectToCameraPlane(std::vector<cv::Point3f> cloud){
 			aux_r.y = Point2dimensions_right(1)/Point2dimensions_right(2);
 
 
-			/*						std::cout << "Right: " << aux_r.x << "  " << aux_r.y <<std::endl;
+/*									std::cout << "Right: " << aux_r.x << "  " << aux_r.y <<std::endl;
 				std::cout << "Left: " << aux_l.x << "  " << aux_l.y <<std::endl;*/
 
 			if(aux_l.x < 140 && aux_l.x >-140 && aux_r.x < 140 && aux_r.x > -140 && aux_l.y < 110 && aux_l.y > -110 && aux_r.y < 110 && aux_r.y >-110 ){
 				modelpoints2dleft.push_back(aux_l);
 				modelpoints2dright.push_back(aux_r);
 			}else {							
-
 				//std::cout << aux_l.x << std::endl;
 				/*					std::cout << aux_l << std::endl;
 					std::cout << aux_r << std::endl;*/

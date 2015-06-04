@@ -42,42 +42,40 @@ void Models::GenerateModelCloud(){
 	Function to rotate + translate points in 3D space
  */
 
-cv::Point3f Models::Transform(cv::Point3f pointmodel, Particle parti){
-
+Eigen::MatrixXf Models::Transform(Particle parti){
+	
 	Eigen::Matrix3f rotationMatrix;
-	Eigen::MatrixXf aux_m(3,1);
-	Eigen::MatrixXf aux_m2(1,3);
+	Eigen::MatrixXf translation(3,1);
+	Eigen::MatrixXf points(3,ModelPoints.size());
+	Eigen::MatrixXf transformation(3, ModelPoints.size());
+	Eigen::MatrixXf u = Eigen::MatrixXf::Ones(1,ModelPoints.size());
 
+	for(int i = 0; i < ModelPoints.size(); i++){
+		points(0,i) = ModelPoints.at(i).x;
+		points(1,i) = ModelPoints.at(i).y;
+		points(2,i) = ModelPoints.at(i).z;		
+	}
+	
 	//Construction of the Rotation matrix 3x3 with the orientation of the point	
 	rotationMatrix =  Eigen::AngleAxisf(parti.GetAlpha(), Eigen::Vector3f::UnitX())
 					* Eigen::AngleAxisf(parti.GetBeta(),  Eigen::Vector3f::UnitY())
 					* Eigen::AngleAxisf(parti.GetGamma(), Eigen::Vector3f::UnitZ());
 	
 	//Construction of the translation vector 3x1 with the pose of the point
-	Eigen::MatrixXf translation(3,1);
 	translation << parti.GetX(), parti.GetY(), parti.GetZ();
-
-
-	aux_m << pointmodel.x, pointmodel.y, pointmodel.z; 
-
-	//Compute the transformation = rotation + translation
-	// [X', Y', Z'] = RotationMatrix*[X Y Z] + TranslationMatrix
-	aux_m2 = (rotationMatrix*aux_m) + translation;
-
-	//Save the point as Point3f and return it
-	cv::Point3f transformedpoint;
-	transformedpoint.x = aux_m2(0);
-	transformedpoint.y = aux_m2(1);
-	transformedpoint.z = aux_m2(2);
 	
-	return transformedpoint;
+	transformation = (rotationMatrix*points)+(translation*u);
+	
+	return transformation;
+	
 }
+
 
 /*
 	Functions to generate the 3D Models
  */
 
-void Models::Cube(float side, Particle p){
+void Models::Cube(float side){
 	
 	ModelPoints.clear();
 	cv::Point3f aux(0,0,0);
@@ -96,13 +94,12 @@ void Models::Cube(float side, Particle p){
 						aux.x = i;
 						aux.y = j;
 						aux.z = k;
-						aux = Transform(aux,p);
 						ModelPoints.push_back(aux);
+					
 
 						aux.x = i;
 						aux.y = -j;
 						aux.z = k;
-						aux = Transform(aux,p);
 						ModelPoints.push_back(aux);
 
 					}
@@ -112,13 +109,11 @@ void Models::Cube(float side, Particle p){
 						aux.x = i;
 						aux.y = j;
 						aux.z = k;
-						aux = Transform(aux,p);
 						ModelPoints.push_back(aux);
 
 						aux.x = -i;
 						aux.y = j;
 						aux.z = k;
-						aux = Transform(aux,p);
 						ModelPoints.push_back(aux);
 					}
 				}else{
@@ -128,13 +123,11 @@ void Models::Cube(float side, Particle p){
 						aux.x = i;
 						aux.y = j;
 						aux.z = k;
-						aux = Transform(aux,p);
 						ModelPoints.push_back(aux);
 
 						aux.x = -i;
 						aux.y = -j;
 						aux.z = k;
-						aux = Transform(aux,p);
 						ModelPoints.push_back(aux);
 					}
 
@@ -143,13 +136,11 @@ void Models::Cube(float side, Particle p){
 						aux.x = i;
 						aux.y = j;
 						aux.z = k;
-						aux = Transform(aux,p);
 						ModelPoints.push_back(aux);
 
 						aux.x = -i;
 						aux.y = -j;
 						aux.z = k;
-						aux = Transform(aux,p);
 						ModelPoints.push_back(aux);
 
 
@@ -180,7 +171,6 @@ void Models::Cylinder(Particle p, float radius, float heigth){
 				aux.x = radius*cos(i);
 				aux.y = radius*sin(i);
 				aux.z = h;
-				aux = Transform(aux,p);
 
 				ModelPoints.push_back(aux);
 			}
@@ -191,8 +181,7 @@ void Models::Cylinder(Particle p, float radius, float heigth){
 				aux.x = radius*cos(i);
 				aux.y = radius*sin(i);
 				aux.z = h;
-				aux = Transform(aux,p);
-
+				
 				ModelPoints.push_back(aux);
 			}
 		}

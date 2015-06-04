@@ -33,13 +33,13 @@ public:
 	//Get and Set Methods
 	void Set_PointCloud(pcl::PointCloud<pcl::PointXYZ> cloud){ ModelCloud = cloud;}
 	pcl::PointCloud<pcl::PointXYZ> Get_PointCloud(){return ModelCloud;}
-	std::vector<cv::Point3f> Get_ModelPoints(){return ModelPoints;}
+
 
 	//Methods to construct and transform the 3D objects
-	void Cube(float, Particle);
+	void Cube(float);
 	void Cylinder(Particle, float, float);
 	void GenerateModelCloud();
-	cv::Point3f Transform(cv::Point3f, Particle);
+	Eigen::MatrixXf Transform(Particle);
 };
 
 #endif
