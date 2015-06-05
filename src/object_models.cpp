@@ -6,7 +6,6 @@
 
 #include <leap_object_tracking/object_models.h>
 
-
 //////////////////////////////////////////////////////////////////
 ////                                                          ////
 ////                            CODE                          ////
@@ -43,11 +42,12 @@ void Models::GenerateModelCloud(){
  */
 
 Eigen::MatrixXf Models::Transform(Particle parti){
-	
+
 	Eigen::Matrix3f rotationMatrix;
 	Eigen::MatrixXf translation(3,1);
 	Eigen::MatrixXf points(3,ModelPoints.size());
 	Eigen::MatrixXf transformation(3, ModelPoints.size());
+	Eigen::MatrixXf transformation2(4,ModelPoints.size());
 	Eigen::MatrixXf u = Eigen::MatrixXf::Ones(1,ModelPoints.size());
 
 	for(int i = 0; i < ModelPoints.size(); i++){
@@ -63,10 +63,15 @@ Eigen::MatrixXf Models::Transform(Particle parti){
 	
 	//Construction of the translation vector 3x1 with the pose of the point
 	translation << parti.GetX(), parti.GetY(), parti.GetZ();
-	
 	transformation = (rotationMatrix*points)+(translation*u);
 	
-	return transformation;
+	//Add the Homogeneous coordinate
+	transformation2.row(0) = transformation.row(0);
+	transformation2.row(1) = transformation.row(1);
+	transformation2.row(2) = transformation.row(2);
+	transformation2.row(3).setOnes();
+	
+	return transformation2;
 	
 }
 

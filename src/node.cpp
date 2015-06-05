@@ -86,11 +86,6 @@ void ImagesCallback(const sensor_msgs::ImageConstPtr& imageLeft,
 		//Adquire frames and apply edge detector
 		CameraFrames New_Frames(imageLeft, imageRight, leftInfo, rightInfo);
 		New_Frames.EdgeDetector();
-		New_Frames.Homography();
-		
-		//Show camera output
-		New_Frames.Show_LeftCam();
-		New_Frames.Show_RightCam();
 
 		//Shows edge detector output
 		New_Frames.Show_LeftDistanceFrame();
@@ -107,8 +102,10 @@ void ImagesCallback(const sensor_msgs::ImageConstPtr& imageLeft,
 		
 		//Compute statistics
 		Filter.Statistics();
-
-
+		
+		//Draw Results
+		Filter.DrawParticles(New_Frames);
+		
 	}
 
 	//pub_PFCloud.publish(model.Get_PointCloud());//Uncoment this line for publish the cloud of the model
@@ -123,7 +120,6 @@ int main(int argc, char** argv) {
 	ros::NodeHandle nh;
 
 /*
-
 	//Create a sample listener and controller
 	CameraListener listener;
 	Controller controller;

@@ -54,6 +54,7 @@ public:
 	void MeasurementModel_A(CameraFrames);
 	void Resampling();
 	void Statistics();
+	void DrawParticles(CameraFrames);
 	
 	Eigen::MatrixXd MultivariateGaussian(float, float, float, float, float, float);
 };

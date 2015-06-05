@@ -5,7 +5,7 @@
 ///////////////////////////////////////////////////////////////////
 
 #include <leap_object_tracking/particle_filter.h>
-#include <leap_object_tracking/GetTime.h>
+
 
 
 //////////////////////////////////////////////////////////////////
@@ -44,21 +44,22 @@ struct functor_traits<scalar_normal_dist_op<Scalar> >
 std::random_device rd;
 std::mt19937 gen(rd());
 
+
+
 /*
 	Function to initialize the filter with random particles in a fixed space
  */
 
 void ParticleFilter::InitializePF(){
+	
+	float x_min = -0.2; 		float x_max = 0.2;
+	float y_min = -0.05; 		float y_max = 0.05;
+	float z_min = 0.01; 		float z_max = 0.05;
+	float alpha_min = 0;		float alpha_max = 360;
+	float beta_min = 0; 		float beta_max = 360;
+	float gamma_min = 0; 		float gamma_max = 360;
 
-	float x_min = -0.2;	 	float x_max = 0.2;
-	float y_min = -0.2; 	float y_max = 0.2;
-	float z_min = 0.05;  	float z_max = 0.1;
-	float alpha_min = 0;	float alpha_max = 360;
-	float beta_min = 0; 	float beta_max = 360;
-	float gamma_min = 0; 	float gamma_max = 360;
-
-
-	//Randomly generation in the limits x,y,z,a,b,c
+	//Randomly generation in the limits
 	std::uniform_real_distribution<float> dis_x(x_min, x_max);
 	std::uniform_real_distribution<float> dis_y(y_min, y_max);
 	std::uniform_real_distribution<float> dis_z(z_min, z_max);
@@ -66,7 +67,6 @@ void ParticleFilter::InitializePF(){
 	std::uniform_real_distribution<float> dis_beta(beta_min, beta_max);
 	std::uniform_real_distribution<float> dis_gamma(gamma_min, gamma_max);
 	
-
 	for (int n = 0; n < nparticles; ++n){
 		
 		FilterParticles.push_back(Particle(dis_x(gen), dis_y(gen), dis_z(gen), dis_alpha(gen), dis_beta(gen), dis_gamma(gen), n));
@@ -136,6 +136,7 @@ void ParticleFilter::MeasurementModel_A(CameraFrames NewFrame){
 
 		NewFrame.ProjectToCameraPlane(model.Transform(FilterParticlesWithCovariance.at(i)));
 
+
 		left = NewFrame.GetProjectedModelPointsLeft();
 		right = NewFrame.GetProjectedModelPointsRight();
 
@@ -144,12 +145,14 @@ void ParticleFilter::MeasurementModel_A(CameraFrames NewFrame){
 		}
 
 		p_AllPoints = 1;
-
+		long double counter = 0;
 		for(int k = 0; k < (left.size() > right.size() ? right.size() : left.size()); k++){
 
 			if(left.at(k).x > 0 && left.at(k).x < 280 && right.at(k).x > 0 && right.at(k).x < 280
 					&& left.at(k).y > 0 && left.at(k).y < 220 && right.at(k).y > 0 && right.at(k).y < 220){
-				
+
+				counter++;
+
 				D_Left = (double) NewFrame.GetLeftDistanceFrame().at<float>((int)left.at(k).x, (int)left.at(k).y);
 				D_Right = (double) NewFrame.GetRightDistanceFrame().at<float>((int)right.at(k).x, (int)right.at(k).y);
 
@@ -158,20 +161,25 @@ void ParticleFilter::MeasurementModel_A(CameraFrames NewFrame){
 
 				Normalizer_Right = 1/(1-exp(-lambda*D_max));
 				p_Right = Normalizer_Right*lambda*exp(-lambda*D_Right);
-				p_AllPoints = p_AllPoints*(long double)(0.5*p_Left + 0.5*p_Right);
+				p_AllPoints +=(long double)(0.5*p_Left + 0.5*p_Right);
 				//std::cout << p_AllPoints << std::endl;
 
 				/*					std::cout << "D_Left     D_Right     NORM      p_Left      p_Right" << std::endl;
 					std::cout << D_Left << "    " << D_Right  << "     " <<Normalizer_Left << "   " << p_Left  <<"   " << p_Right << std::endl;	*/
 			}
 		}	
-		if(p_AllPoints == 1) p_AllPoints = 0;
-		FilterParticlesWithCovariance.at(i).SetProb(p_AllPoints);
+		if(p_AllPoints == 1){
+			p_AllPoints = 0;
+		}else{
+
+			//std::cout << "prob_all: " << p_AllPoints << "  counter: " << counter << "  prob= "<< p_AllPoints/counter <<std::endl;
+			FilterParticlesWithCovariance.at(i).SetProb(p_AllPoints/counter);
+		}
 		left.clear();
 		right.clear();
 	}
 	std::cout << "Not valid particles: " << a << "  from " << FilterParticlesWithCovariance.size() << "particles"<<std::endl;
-	
+
 }
 
 
@@ -237,16 +245,15 @@ void ParticleFilter::Resampling(){
 
 	FilterParticlesWithCovariance.clear();
 
-	//Generate randomly the rest of particles
-
-	float x_min = -0.4; 		float x_max = 0.4;
-	float y_min = -0.4; 		float y_max = 0.4;
-	float z_min = 0.05; 		float z_max = 0.4;
+	//Randomly generation in the limits 
+	
+	float x_min = -0.2; 		float x_max = 0.2;
+	float y_min = -0.01; 		float y_max = 0.01;
+	float z_min = 0.01; 		float z_max = 0.1;
 	float alpha_min = 0;		float alpha_max = 360;
 	float beta_min = 0; 		float beta_max = 360;
 	float gamma_min = 0; 		float gamma_max = 360;
-
-	//Randomly generation in the limits x,y,z,a,b,c
+	
 	std::uniform_real_distribution<float> dis_x(x_min, x_max);
 	std::uniform_real_distribution<float> dis_y(y_min, y_max);
 	std::uniform_real_distribution<float> dis_z(z_min, z_max);
@@ -276,9 +283,9 @@ Eigen::MatrixXd ParticleFilter::MultivariateGaussian(float x, float y, float z, 
 	Eigen::MatrixXd covar(size,size);
 
 	mean  <<  x, y, z, a, b, c;
-	covar <<  .0005, 0, 0, 0, 0, 0,
-			0, .0005, 0, 0, 0, 0,
-			0, 0, .0005, 0, 0, 0,
+	covar <<  .0001, 0, 0, 0, 0, 0,
+			0, .0001, 0, 0, 0, 0,
+			0, 0, .0001, 0, 0, 0,
 			0, 0, 0, .0003, 0, 0,
 			0, 0, 0, 0, .0003, 0,
 			0, 0, 0, 0, 0, .0003;
@@ -319,7 +326,44 @@ void ParticleFilter::Statistics(){
 	Eigen::MatrixXf u = Eigen::MatrixXf::Ones(1,20);
 	Covariance = (1/20-1)*(SampleMatrix-Mean*u)*(SampleMatrix-Mean*u).transpose();
 	
-	//std::cout << Covariance << std::endl;
+	//std::cout << Mean << std::endl;
 
 }
+
+void ParticleFilter::DrawParticles(CameraFrames NewFrame){
+
+	Eigen::MatrixXf particles(4,20);
+	std::vector<cv::Point2f> left;
+	std::vector<cv::Point2f> right;
+	
+	cv::Mat leftFrame = NewFrame.GetLeftFrame();
+	cv::Mat rightFrame = NewFrame.GetRightFrame();
+	
+	particles.row(0) = SampleMatrix.row(0);
+	particles.row(1) = SampleMatrix.row(1);
+	particles.row(2) = SampleMatrix.row(2);
+	particles.row(2).setOnes();
+
+	NewFrame.ProjectToCameraPlane(particles);
+	
+	left = NewFrame.GetProjectedModelPointsLeft();
+	right = NewFrame.GetProjectedModelPointsRight();
+
+	for(int k = 0; k < (left.size() > right.size() ? right.size() : left.size()); k++){
+		
+		cv::Point center_l(floor(left.at(k).x), floor(left.at(k).y));	
+		cv::Point center_r(floor(right.at(k).x), floor(right.at(k).y));
+		
+		cv::circle(leftFrame, center_l, 2, cv::Scalar(255,0,0),-1);
+		cv::circle(rightFrame, center_r, 2, cv::Scalar(255,0,0),-1);
+	}
+	left.clear();
+	right.clear();
+	
+	cv::imshow("pointsleft", leftFrame);
+	cv::imshow("pointsright", rightFrame);
+	
+	cv::waitKey(1);
+}
+
 

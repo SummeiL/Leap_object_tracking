@@ -8,6 +8,7 @@
 /* Returns the amount of milliseconds elapsed since the UNIX epoch. Works on both
  * windows and linux. */
 
+
 uint64 GetTimeMs64()
 {
 #ifdef _WIN32
@@ -34,11 +35,11 @@ uint64 GetTimeMs64()
 
  uint64 ret = tv.tv_usec;
  /* Convert from micro seconds (10^-6) to milliseconds (10^-3) */
- //ret /= 1000;
+ ret /= 1000;
 
  /* Adds the seconds (10^0) after converting them to milliseconds (10^-3) */
- ret += (tv.tv_sec);
+ ret += (tv.tv_sec * 1000);
 
  return ret;
-#endif
 }
+#endif

@@ -31,10 +31,6 @@ private:
 	
 	std::vector<cv::Point2f> modelpoints2dleft;
 	std::vector<cv::Point2f> modelpoints2dright;
-	
-	Eigen::MatrixXf H;
-	
-	//Configuration parameters of the edge detector
 
 
 public:
@@ -58,14 +54,12 @@ public:
 	const sensor_msgs::CameraInfoConstPtr GetLeftInfo(){ return leftCamInfo; }
 	const sensor_msgs::CameraInfoConstPtr GetRightInfo(){ return rightCamInfo; }
 	
-	Eigen::MatrixXf GetHomography(){ return H;}
 	std::vector<cv::Point2f> GetProjectedModelPointsLeft(){return modelpoints2dleft;}
 	std::vector<cv::Point2f> GetProjectedModelPointsRight(){return modelpoints2dright;}
 
 
 	//Methods for the adquired images
 	void EdgeDetector();
-	void Homography();
 	void ProjectToCameraPlane(Eigen::MatrixXf cloud);
 
 	void Show_LeftCam();

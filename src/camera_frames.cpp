@@ -11,6 +11,7 @@
 
 #include "opencv2/calib3d/calib3d.hpp"
 
+#include <leap_object_tracking/GetTime.h>
 
 
 //////////////////////////////////////////////////////////////////
@@ -71,7 +72,7 @@ CameraFrames& CameraFrames::operator = (const CameraFrames &f){
 		this->rightCamInfo = f.rightCamInfo;
 		this->LeftDistanceFrame = f.LeftDistanceFrame;
 		this->RightDistanceFrame = f.RightDistanceFrame;
-		this->H = f.H;
+
 	}	
 }
 
@@ -143,126 +144,73 @@ void CameraFrames::EdgeDetector(){
 	
 }
 
-/*
-	Computes the Homography matrix with keypoint detectors
- */
-
-void CameraFrames::Homography(){
-
-	std::vector<cv::Point2f> left;
-	std::vector<cv::Point2f> right;
-
-	detectFeatures detect(LeftFrame, RightFrame);
-
-	//Detect Keypoints in both images left/right
-	detect.FAST_Detector();
-
-	//Extract Features from the keypoints left/right
-	detect.SURF_Extractor();
-
-	//Match the keypoints of the two images
-	detect.BruteForce_Matcher();
-
-	for(int i = 0; i < detect.GetGoodMatches().size(); i++){
-
-		left.push_back(detect.GetMatchedPoint(i, 1));
-		right.push_back(detect.GetMatchedPoint(i, 2));		
-
-	}
-	
-	detect.Draw_GoodMatches();
-
-	//findHomography needs at least 4 points to comput it, and almost 10 to be accurate
-	if(left.size() < 4 || right.size() < 4){
-
-		H.setZero();
-
-	}else{
-		
-		//Compute the Homography image between left and right images
-		cv::Mat_<float> H_aux =  cv::findHomography(left, right, CV_RANSAC);
-		
-		//Transform it to Eigen Matrix
-		cv::cv2eigen(H_aux, H);
-	}
-}
 
 void CameraFrames::ProjectToCameraPlane(Eigen::MatrixXf cloud){
 
-	Eigen::MatrixXf A(3,4);
-	Eigen::MatrixXf Point2dimensions_right(1,3);
-	Eigen::MatrixXf Point3dimensions_left(1,4);
-	Eigen::MatrixXf Point2dimensions_left(1,3);
-
+	Eigen::MatrixXf P_L(3,4);
+	Eigen::MatrixXf P_R(3,4);
+	Eigen::MatrixXf Point2dimensions_right(3,cloud.cols());
+	Eigen::MatrixXf Point2dimensions_left(3,cloud.cols());
+	Eigen::MatrixXf u = Eigen::MatrixXf::Ones(1,cloud.cols());
+	Eigen::MatrixXf translation_l(4,1);
+	Eigen::MatrixXf translation_r(4,1);
+	
+	cv::Point2f aux_l(0,0);
+	cv::Point2f aux_r(0,0);
+	
 	modelpoints2dright.clear();
 	modelpoints2dleft.clear();
-
-	//Construct the Projection Matrix of the Left Camera
-	A(0,0) = leftCamInfo->P[0];
-	A(0,1) = leftCamInfo->P[1];
-	A(0,2) = leftCamInfo->P[2];
-	A(0,3) = leftCamInfo->P[3];
-	A(1,0) = leftCamInfo->P[4];
-	A(1,1) = leftCamInfo->P[5];
-	A(1,2) = leftCamInfo->P[6];
-	A(1,3) = leftCamInfo->P[7];
-	A(2,0) = leftCamInfo->P[8];
-	A(2,1) = leftCamInfo->P[9];
-	A(2,2) = leftCamInfo->P[10];
-	A(2,3) = leftCamInfo->P[11];
-	//std::cout << A << std::endl;
-
-	if (!H.isZero(0.000000)){
-		
-		for(int i = 0; i < cloud.cols(); i++){
-			
-			cv::Point2f aux_l(0,0);
-			cv::Point2f aux_r(0,0);
-			
-			//Store the 3D point in a vector and convert it to Homogeneus coordinates [X Y Z 1]
-			//The Projection matrix projects points in the camera frame. The point is generated
-			//in the real world so it need to be translated to the leftcameraframe.			
-			Point3dimensions_left << cloud(0,i),cloud(1,i), cloud(2,i),1;
 	
-			/*Project the 3D point onto the Left camera plane [u v w]_left = ProjMat * [X Y Z 1]'
-			  Matrix Dimensions:[3x1] = [3x4] * [1x4]'.                                       */
-			Point2dimensions_left = A*Point3dimensions_left.transpose();
+	//The Projection matrix projects points in the camera frame.
+	//Construct the Projection Matrix of the Left Camera
+	P_L(0,0) = leftCamInfo->P[0];	P_L(1,0) = leftCamInfo->P[4]; 	P_L(2,0) = leftCamInfo->P[8];
+	P_L(0,1) = leftCamInfo->P[1]; 	P_L(1,1) = leftCamInfo->P[5]; 	P_L(2,1) = leftCamInfo->P[9];
+	P_L(0,2) = leftCamInfo->P[2]; 	P_L(1,2) = leftCamInfo->P[6]; 	P_L(2,2) = leftCamInfo->P[10];
+	P_L(0,3) = leftCamInfo->P[3]; 	P_L(1,3) = leftCamInfo->P[7]; 	P_L(2,3) = leftCamInfo->P[11];
+	
+	//Construct the Projection Matrix of the Right Camera	
+	P_R(0,0) = rightCamInfo->P[0]; 	P_R(1,0) = rightCamInfo->P[4]; 	P_R(2,0) = rightCamInfo->P[8];
+	P_R(0,1) = rightCamInfo->P[1]; 	P_R(1,1) = rightCamInfo->P[5]; 	P_R(2,1) = rightCamInfo->P[9];
+	P_R(0,2) = rightCamInfo->P[2]; 	P_R(1,2) = rightCamInfo->P[6]; 	P_R(2,2) = rightCamInfo->P[10];
+	P_R(0,3) = rightCamInfo->P[3]; 	P_R(1,3) = rightCamInfo->P[7];	P_R(2,3) = rightCamInfo->P[11];
+	
+	/*Project the 3D point onto the camera planes [u v w] = ProjMat * (3DPoints+Translation).
+	 Translation is neccesary to put the 3D points on the corresponding camera frame.
+	 Baseline = 0.04 and global frame in the midle of the baseline.  */
+	
+	translation_l << -0.02, 0, 0, 0;
+	translation_r << 0.02, 0, 0, 0;
+	Point2dimensions_left = P_L*(cloud+(translation_l*u));
+	Point2dimensions_right = P_R*(cloud+(translation_r*u));
+	
+	//Divide by the Homogeneous Coordinates to get the 2D Points
+	Point2dimensions_left.row(0) = Point2dimensions_left.row(0).cwiseQuotient(Point2dimensions_left.row(2));
+	Point2dimensions_left.row(1) = Point2dimensions_left.row(1).cwiseQuotient(Point2dimensions_left.row(2));
+
+
+		for(int i = 0; i < cloud.cols(); i++){
+
+			aux_l.x = Point2dimensions_left(0,i);
+			aux_l.y = Point2dimensions_left(1,i);
 			
-			
-			//Divide by the Homogeneous coordinate to obtain the [X_left, Y_left]
-			aux_l.x = Point2dimensions_left(0)/Point2dimensions_left(2);
-			aux_l.y = Point2dimensions_left(1)/Point2dimensions_left(2);
-
-			Point2dimensions_left(0) = aux_l.x;
-			Point2dimensions_left(1) = aux_l.y;
-			Point2dimensions_left(2) = 1;
-
-			/*Transform the point from the left camera view to the right camera view
-				  using the Homography matrix : [u v w]_right = H*[u v w]_left.
-				  Matrix Dimensions: [3x1] = [3x3] * [3x1]   	    */
-
-			Point2dimensions_right = H*Point2dimensions_left; 
-			//std::cout << Point2dimensions_right << std::endl;
-
-			//Divide by the Homogeneous coordinate to obtain the [X_right, Y_right]
-			aux_r.x = Point2dimensions_right(0)/Point2dimensions_right(2);
-			aux_r.y = Point2dimensions_right(1)/Point2dimensions_right(2);
-
-
-/*									std::cout << "Right: " << aux_r.x << "  " << aux_r.y <<std::endl;
-				std::cout << "Left: " << aux_l.x << "  " << aux_l.y <<std::endl;*/
-
-			if(aux_l.x < 140 && aux_l.x >-140 && aux_r.x < 140 && aux_r.x > -140 && aux_l.y < 110 && aux_l.y > -110 && aux_r.y < 110 && aux_r.y >-110 ){
+			aux_r.x = Point2dimensions_right(0,i);
+			aux_r.y = Point2dimensions_right(1,i);
+					
+			if(aux_l.x < 280 && aux_l.x >=0 && aux_r.x < 280 && aux_r.x >= 0 && aux_l.y < 220 && aux_l.y >= 0 && aux_r.y < 220 && aux_r.y >=0 ){
+				
 				modelpoints2dleft.push_back(aux_l);
 				modelpoints2dright.push_back(aux_r);
-			}else {							
-				//std::cout << aux_l.x << std::endl;
-				/*					std::cout << aux_l << std::endl;
-					std::cout << aux_r << std::endl;*/
-				//std::cout << "--------" << std::endl;
+				
 			}
 		}
-	}else std::cerr << "ERROR: Can not find Homography" <<std::endl;
+/*		cv::Point center(floor(aux_l.x), floor(aux_l.y));
+		cv::circle(LeftFrame,center,0.1,cv::Scalar(255,255,255),-1);
+		cv::Point center2(floor(aux_l.x), floor(aux_l.y));
+		cv::circle(RightFrame,center2,0.1,cv::Scalar(255,255,255),-1);
+		cv::imshow("pointsleft", LeftFrame);
+		cv::imshow("pointsright", RightFrame);
+		cv::waitKey(1);*/
+		
 
 }
 
