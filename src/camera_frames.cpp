@@ -186,6 +186,9 @@ void CameraFrames::ProjectToCameraPlane(Eigen::MatrixXf cloud){
 	//Divide by the Homogeneous Coordinates to get the 2D Points
 	Point2dimensions_left.row(0) = Point2dimensions_left.row(0).cwiseQuotient(Point2dimensions_left.row(2));
 	Point2dimensions_left.row(1) = Point2dimensions_left.row(1).cwiseQuotient(Point2dimensions_left.row(2));
+	
+	Point2dimensions_right.row(0) = Point2dimensions_right.row(0).cwiseQuotient(Point2dimensions_right.row(2));
+	Point2dimensions_right.row(1) = Point2dimensions_right.row(1).cwiseQuotient(Point2dimensions_right.row(2));
 
 
 		for(int i = 0; i < cloud.cols(); i++){

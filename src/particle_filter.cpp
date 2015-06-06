@@ -17,7 +17,7 @@
 
 Eigen::VectorXf Mean(6);
 Eigen::MatrixXf SampleMatrix(6,20);
-
+Eigen::MatrixXf SetOfParticles(4,200);
 
 namespace Eigen{
 namespace internal {
@@ -52,8 +52,8 @@ std::mt19937 gen(rd());
 
 void ParticleFilter::InitializePF(){
 	
-	float x_min = -0.2; 		float x_max = 0.2;
-	float y_min = -0.05; 		float y_max = 0.05;
+	float x_min = -0.05; 		float x_max = 0.05;
+	float y_min = -0.02; 		float y_max = 0.02;
 	float z_min = 0.01; 		float z_max = 0.05;
 	float alpha_min = 0;		float alpha_max = 360;
 	float beta_min = 0; 		float beta_max = 360;
@@ -69,7 +69,16 @@ void ParticleFilter::InitializePF(){
 	
 	for (int n = 0; n < nparticles; ++n){
 		
-		FilterParticles.push_back(Particle(dis_x(gen), dis_y(gen), dis_z(gen), dis_alpha(gen), dis_beta(gen), dis_gamma(gen), n));
+		 Particle p(dis_x(gen), dis_y(gen), dis_z(gen), dis_alpha(gen), dis_beta(gen), dis_gamma(gen), n);
+		
+		FilterParticles.push_back(p);
+		
+		SetOfParticles(0,n) = p.GetX();
+		SetOfParticles(1,n) = p.GetY();
+		SetOfParticles(2,n) = p.GetZ();
+		SetOfParticles(3,n) = 1;
+		
+
 
 	}
 	//Generate the 3D Model
@@ -105,6 +114,7 @@ void ParticleFilter::MotionModel(){
 			p.SetAlpha(samples(3,j));
 			p.SetBeta(samples(4,j));
 			p.SetGamma(samples(5,j));
+			
 
 			FilterParticlesWithCovariance.push_back(p);
 		}	
@@ -123,13 +133,15 @@ void ParticleFilter::MeasurementModel_A(CameraFrames NewFrame){
 	std::vector<cv::Point2f> right;
 
 	double D_Left, D_Right;
-	double D_max = 279; double D_min = 0;
+	double D_max = 279;  double D_min = 0;
 
-	double Normalizer_Left, Normalizer_Right;
+	double Normalizer;
 	double p_Left, p_Right;
-	long double p_AllPoints = 1;
-	double lambda = 0.000001;
+	double p_AllPoints;
+	double lambda = 0.05;
 	double a = 0;
+	double w = 0.5;
+
 
 	for(int  i = 0; i < FilterParticlesWithCovariance.size(); i++){
 
@@ -144,8 +156,8 @@ void ParticleFilter::MeasurementModel_A(CameraFrames NewFrame){
 			a++;
 		}
 
-		p_AllPoints = 1;
-		long double counter = 0;
+		p_AllPoints = 0;
+		double counter = 0;
 		for(int k = 0; k < (left.size() > right.size() ? right.size() : left.size()); k++){
 
 			if(left.at(k).x > 0 && left.at(k).x < 280 && right.at(k).x > 0 && right.at(k).x < 280
@@ -156,29 +168,27 @@ void ParticleFilter::MeasurementModel_A(CameraFrames NewFrame){
 				D_Left = (double) NewFrame.GetLeftDistanceFrame().at<float>((int)left.at(k).x, (int)left.at(k).y);
 				D_Right = (double) NewFrame.GetRightDistanceFrame().at<float>((int)right.at(k).x, (int)right.at(k).y);
 
-				Normalizer_Left = 1/(1-exp(-lambda*D_max));
-				p_Left = Normalizer_Left*lambda*exp(-lambda*D_Left);
+				p_Left = exp(-lambda*D_Left);
+				p_Right = exp(-lambda*D_Right);
 
-				Normalizer_Right = 1/(1-exp(-lambda*D_max));
-				p_Right = Normalizer_Right*lambda*exp(-lambda*D_Right);
-				p_AllPoints +=(long double)(0.5*p_Left + 0.5*p_Right);
-				//std::cout << p_AllPoints << std::endl;
-
-				/*					std::cout << "D_Left     D_Right     NORM      p_Left      p_Right" << std::endl;
-					std::cout << D_Left << "    " << D_Right  << "     " <<Normalizer_Left << "   " << p_Left  <<"   " << p_Right << std::endl;	*/
+				p_AllPoints +=(w*p_Left + w*p_Right);
+								
+/*									std::cout << "D_Left     D_Right      p_Left      p_Right" << std::endl;
+					std::cout << D_Left << "    " << D_Right  << "     " << p_Left  <<"   " << p_Right << std::endl;	*/
 			}
 		}	
-		if(p_AllPoints == 1){
-			p_AllPoints = 0;
-		}else{
 
-			//std::cout << "prob_all: " << p_AllPoints << "  counter: " << counter << "  prob= "<< p_AllPoints/counter <<std::endl;
-			FilterParticlesWithCovariance.at(i).SetProb(p_AllPoints/counter);
+		if(counter != 0 && !isinf(p_AllPoints)){
+/*					std::cout << counter<<std::endl;
+			std::cout << "prob_all: " << p_AllPoints << "  counter: " << counter << "  prob= "<< p_AllPoints/counter <<std::endl;*/
+		FilterParticlesWithCovariance.at(i).SetProb(p_AllPoints/counter);
+		}else{
+			FilterParticlesWithCovariance.at(i).SetProb(0);
 		}
 		left.clear();
 		right.clear();
 	}
-	std::cout << "Not valid particles: " << a << "  from " << FilterParticlesWithCovariance.size() << "particles"<<std::endl;
+	//std::cout << "Not valid particles: " << a << "  from " << FilterParticlesWithCovariance.size() << "particles"<<std::endl;
 
 }
 
@@ -189,38 +199,40 @@ void ParticleFilter::Resampling(){
 	float x_mean = 0; float a_mean = 0;
 	float y_mean = 0; float b_mean = 0;
 	float z_mean = 0; float g_mean = 0;
-	
-	//Sumatory of all the probabilities
-	long double sum_w = 0;
-
-	for(int h = 0; h < nparticles*nn; h++){
-
-		sum_w += FilterParticlesWithCovariance.at(h).GetProb();
-
+	double sum_w = 0;
+	double counter = 0;
+	for(int i = 0; i < FilterParticlesWithCovariance.size(); i++){
+		
+		sum_w += FilterParticlesWithCovariance.at(i).GetProb();
+		counter++;
 	}
-
+	sum_w = sum_w/counter;
+	
 	double M = 20; //Number of samples to draw
-	double r = static_cast<double> (rand())/(static_cast<double>(RAND_MAX)/(sum_w/M));	
+	double r = static_cast<double> (rand())/(static_cast<double>(RAND_MAX)/(1/M));	
 	int i = 0;
 	double U,c;
+	
+	//std::cout << "r vale: " << r <<  std::endl;
 
 	c = FilterParticlesWithCovariance.at(0).GetProb();
 
 	for(double m = 0; m < M; m++){
 
-		U = r + (m)*(sum_w/M);
+		U = r + (m)*(1/M);
 
 		while(U > c){
 
 			i  = i + 1;
-
 			c = c + FilterParticlesWithCovariance.at(i).GetProb(); 
 
 		}
 
-/*		std::cout << "Particle chosen: " << i
-				<< "   with probability: " << FilterParticlesWithCovariance.at(i).GetProb()<<std::endl;*/
+		std::cout << "Particle chosen: " << i
+				<< "   with probability: " << FilterParticlesWithCovariance.at(i).GetProb()<<std::endl;
 		
+		//std::cout << "x: " << FilterParticlesWithCovariance.at(i).GetX() << "     y: " << FilterParticlesWithCovariance.at(i).GetX() << "     z: " << FilterParticlesWithCovariance.at(i).GetZ()<<std::endl; 
+
 
 		FilterParticles.push_back(FilterParticlesWithCovariance.at(i));
 		
@@ -231,15 +243,19 @@ void ParticleFilter::Resampling(){
 		SampleMatrix(4,m)=FilterParticlesWithCovariance.at(i).GetBeta();
 		SampleMatrix(5,m)=FilterParticlesWithCovariance.at(i).GetGamma();
 		
+		SetOfParticles(0,m) = FilterParticlesWithCovariance.at(i).GetX();
+		SetOfParticles(1,m) = FilterParticlesWithCovariance.at(i).GetY();
+		SetOfParticles(2,m) = FilterParticlesWithCovariance.at(i).GetZ();
+		SetOfParticles(3,m) = 1;
+		
 		x_mean +=FilterParticlesWithCovariance.at(i).GetX();
 		y_mean +=FilterParticlesWithCovariance.at(i).GetY();
 		z_mean +=FilterParticlesWithCovariance.at(i).GetZ();
 		a_mean +=FilterParticlesWithCovariance.at(i).GetAlpha();
 		b_mean += FilterParticlesWithCovariance.at(i).GetBeta();
 		g_mean += FilterParticlesWithCovariance.at(i).GetGamma();
-	}
-	
-	
+	}	
+	std::cout << "=================================================" <<std::endl;
 	Mean << x_mean/M, y_mean/M, z_mean/M,a_mean/M,b_mean/M,g_mean/M;
 
 
@@ -262,8 +278,14 @@ void ParticleFilter::Resampling(){
 	std::uniform_real_distribution<float> dis_gamma(gamma_min, gamma_max);
 
 	for(int h = M; h < nparticles; ++h){
-
-		FilterParticles.push_back(Particle(dis_x(gen), dis_y(gen), dis_z(gen), dis_alpha(gen), dis_beta(gen), dis_gamma(gen), h));
+		
+		Particle p(dis_x(gen), dis_y(gen), dis_z(gen), dis_alpha(gen), dis_beta(gen), dis_gamma(gen), h);
+		FilterParticles.push_back(p);
+		
+		SetOfParticles(0,h) = p.GetX();
+		SetOfParticles(1,h) = p.GetY();
+		SetOfParticles(2,h) = p.GetZ();
+		SetOfParticles(3,h) = 1;
 	}
 }
 
@@ -332,37 +354,45 @@ void ParticleFilter::Statistics(){
 
 void ParticleFilter::DrawParticles(CameraFrames NewFrame){
 
-	Eigen::MatrixXf particles(4,20);
+	Eigen::MatrixXf particles(4,100);
 	std::vector<cv::Point2f> left;
 	std::vector<cv::Point2f> right;
-	
+	cv::Scalar a(0,0,0);
+
 	cv::Mat leftFrame = NewFrame.GetLeftFrame();
 	cv::Mat rightFrame = NewFrame.GetRightFrame();
 	
-	particles.row(0) = SampleMatrix.row(0);
-	particles.row(1) = SampleMatrix.row(1);
-	particles.row(2) = SampleMatrix.row(2);
-	particles.row(2).setOnes();
+	 cv::Mat img_rgbLeft(leftFrame.size(), CV_8UC3);
+	 cv::Mat img_rgbRight(rightFrame.size(), CV_8UC3);
+	 cv::cvtColor(leftFrame, img_rgbLeft, CV_GRAY2RGB);	 
+	 cv::cvtColor(rightFrame, img_rgbRight, CV_GRAY2RGB);
 
-	NewFrame.ProjectToCameraPlane(particles);
-	
+	NewFrame.ProjectToCameraPlane(SetOfParticles);
+
 	left = NewFrame.GetProjectedModelPointsLeft();
 	right = NewFrame.GetProjectedModelPointsRight();
 
 	for(int k = 0; k < (left.size() > right.size() ? right.size() : left.size()); k++){
-		
+
 		cv::Point center_l(floor(left.at(k).x), floor(left.at(k).y));	
 		cv::Point center_r(floor(right.at(k).x), floor(right.at(k).y));
-		
-		cv::circle(leftFrame, center_l, 2, cv::Scalar(255,0,0),-1);
-		cv::circle(rightFrame, center_r, 2, cv::Scalar(255,0,0),-1);
+
+		if(k < 20){
+			a(1) = 255;
+			cv::circle(img_rgbLeft, center_l, 2, a,-1);
+			cv::circle(img_rgbRight, center_r, 2, a,-1);
+		}else{
+			a(1) = 0;
+			a(2) = 255;		
+		}
+
 	}
 	left.clear();
 	right.clear();
-	
-	cv::imshow("pointsleft", leftFrame);
-	cv::imshow("pointsright", rightFrame);
-	
+
+	cv::imshow("pointsleft", img_rgbLeft);
+	cv::imshow("pointsright", img_rgbRight);
+
 	cv::waitKey(1);
 }
 

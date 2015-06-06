@@ -21,7 +21,7 @@ private:
 	float alpha;
 	float beta;
 	float gamma;
-	long double prob;
+	double prob;
 
 public:
 

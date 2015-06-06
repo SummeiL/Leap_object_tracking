@@ -73,9 +73,13 @@ void ImagesCallback(const sensor_msgs::ImageConstPtr& imageLeft,
 	//This will be used for the first iterarion
 	if(first_time){ 
 		
+		CameraFrames FirstFrame(imageLeft, imageRight, leftInfo, rightInfo);
+		
 		//Set Filter Parameters and Initialize it
-		Filter.Set_nparticles(100);
+		Filter.Set_nparticles(200);
 		Filter.InitializePF();
+		Filter.DrawParticles(FirstFrame);
+		std::cout << "ya"<<std::endl;
 
 		//Change value in order to not repeat these instructions again
 		first_time = false;
