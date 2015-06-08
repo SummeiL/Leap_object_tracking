@@ -15,6 +15,8 @@
 #include "camera_info_manager/camera_info_manager.h"
 #include <tf/transform_broadcaster.h>
 #include <leap_object_tracking/nodeConfig.h>
+#include <fstream>
+#include <time.h>
 
 
 //PCL
@@ -37,6 +39,8 @@
 #include <leap_object_tracking/particle_filter.h>
 #include <leap_object_tracking/object_models.h>
 
+using namespace std;
+
 //////////////////////////////////////////////////////////////////
 ////                                                          ////
 ////                            CODE                          ////
@@ -45,6 +49,10 @@
 
 static bool first_time = true;
 ros::Publisher pub_PFCloud;
+ofstream MyExcelFile;
+ros::Time a;
+ros::Time actual;
+ros::Time now;
  
 ParticleFilter Filter;
 
@@ -72,18 +80,18 @@ void ImagesCallback(const sensor_msgs::ImageConstPtr& imageLeft,
 
 	//This will be used for the first iterarion
 	if(first_time){ 
-		
+		int a;
 		CameraFrames FirstFrame(imageLeft, imageRight, leftInfo, rightInfo);
 		
 		//Set Filter Parameters and Initialize it
 		Filter.Set_nparticles(200);
+		Filter.Set_ParticlestoDraw(20);
 		Filter.InitializePF();
 		Filter.DrawParticles(FirstFrame);
-		std::cout << "ya"<<std::endl;
-
+		
 		//Change value in order to not repeat these instructions again
 		first_time = false;
-
+		
 
 	}else{
 		
@@ -94,19 +102,20 @@ void ImagesCallback(const sensor_msgs::ImageConstPtr& imageLeft,
 		//Shows edge detector output
 		New_Frames.Show_LeftDistanceFrame();
 		New_Frames.Show_RightDistanceFrame();
+		
 
 		//Motion Model
 		Filter.MotionModel();
-	
+		
 		//Measurement Model
 		Filter.MeasurementModel_A(New_Frames);
-		
+		std::cout <<"ppp" <<std::endl;
 		//Resampling
 		Filter.Resampling();
 		
 		//Compute statistics
-		Filter.Statistics();
-		
+		//Filter.Statistics();
+		std::cout <<"ooo"<<std::endl;
 		//Draw Results
 		Filter.DrawParticles(New_Frames);
 		
@@ -122,6 +131,7 @@ int main(int argc, char** argv) {
 
 	ros::init(argc, argv, "node");
 	ros::NodeHandle nh;
+	
 
 /*
 	//Create a sample listener and controller

@@ -142,6 +142,7 @@ void CameraFrames::EdgeDetector(){
 	cv::distanceTransform(dst_left, LeftDistanceFrame, CV_DIST_L2, CV_DIST_MASK_PRECISE);
 	cv::distanceTransform(dst_right, RightDistanceFrame, CV_DIST_L2, CV_DIST_MASK_PRECISE);
 	
+	
 }
 
 
@@ -178,7 +179,7 @@ void CameraFrames::ProjectToCameraPlane(Eigen::MatrixXf cloud){
 	 Translation is neccesary to put the 3D points on the corresponding camera frame.
 	 Baseline = 0.04 and global frame in the midle of the baseline.  */
 	
-	translation_l << -0.02, 0, 0, 0;
+	translation_l << 0, 0, 0, 0;
 	translation_r << 0.02, 0, 0, 0;
 	Point2dimensions_left = P_L*(cloud+(translation_l*u));
 	Point2dimensions_right = P_R*(cloud+(translation_r*u));

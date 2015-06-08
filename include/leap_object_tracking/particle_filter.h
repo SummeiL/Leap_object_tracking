@@ -31,22 +31,23 @@ private:
 	std::vector<cv::Point2d> ModelInCameraPlane; 
 	std::vector<Particle> FilterParticles;
 	std::vector<Particle> FilterParticlesWithCovariance;
-	int nparticles;
+	int nparticles;	//Particles of the filter
+	double M; //Number of samples to draw
 	Models model;
 	
 	//Gaussian distribution parameters
-	int nn;     // How many samples (columns) to draw
 	int size; // Dimensionality (rows)
 
 		
 public:
 	
 	//Constructor and Destructor
-	explicit ParticleFilter(): nn(5), size(6){}
+	explicit ParticleFilter(): size(6){}
 	~ParticleFilter(){}
 	
 	//SetMethods
 	void Set_nparticles(int nparticles){ this->nparticles = nparticles;}
+	void Set_ParticlestoDraw(double M){ this->M = M;}
 
 	//Particle Filter Steps and functions
 	void InitializePF();
@@ -56,7 +57,8 @@ public:
 	void Statistics();
 	void DrawParticles(CameraFrames);
 	
-	Eigen::MatrixXd MultivariateGaussian(float, float, float, float, float, float);
+	
+	Eigen::MatrixXd MultivariateGaussian(float, float, float, float, float, float,int);
 };
 
 #endif
