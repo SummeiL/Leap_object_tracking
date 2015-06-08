@@ -14,7 +14,7 @@
 #include <message_filters/sync_policies/approximate_time.h>
 #include "camera_info_manager/camera_info_manager.h"
 #include <tf/transform_broadcaster.h>
-#include <leap_object_tracking/nodeConfig.h>
+//#include <leap_object_tracking/nodeConfig.h>
 
 
 //PCL
@@ -48,6 +48,13 @@ ros::Publisher pub_PFCloud;
  
 ParticleFilter Filter;
 
+double getDoubleTime() {
+    struct timeval time;
+    gettimeofday(&time,NULL);
+    return time.tv_sec + time.tv_usec * 1e-6; 
+}
+
+
 /*
 	Callback for the Camera Images
 */
@@ -57,6 +64,7 @@ void ImagesCallback(const sensor_msgs::ImageConstPtr& imageLeft,
 					const sensor_msgs::CameraInfoConstPtr& leftInfo, 
 					const sensor_msgs::CameraInfoConstPtr& rightInfo){
 
+    double tstart = getDoubleTime();
 	//Frame of the camera = same position as world
 	static tf::TransformBroadcaster br;
 	tf::Transform transform;
@@ -113,7 +121,8 @@ void ImagesCallback(const sensor_msgs::ImageConstPtr& imageLeft,
 	}
 
 	//pub_PFCloud.publish(model.Get_PointCloud());//Uncoment this line for publish the cloud of the model
-
+    double tend = getDoubleTime();
+    std::cout<<"LOOP took :"<<tend-tstart<<" secs\n";
 }
 
 
