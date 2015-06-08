@@ -14,7 +14,7 @@
 #include <message_filters/sync_policies/approximate_time.h>
 #include "camera_info_manager/camera_info_manager.h"
 #include <tf/transform_broadcaster.h>
-#include <leap_object_tracking/nodeConfig.h>
+
 #include <fstream>
 #include <time.h>
 
@@ -56,6 +56,13 @@ ros::Time now;
  
 ParticleFilter Filter;
 
+double getDoubleTime() {
+    struct timeval time;
+    gettimeofday(&time,NULL);
+    return time.tv_sec + time.tv_usec * 1e-6; 
+}
+
+
 /*
 	Callback for the Camera Images
 */
@@ -84,7 +91,7 @@ void ImagesCallback(const sensor_msgs::ImageConstPtr& imageLeft,
 		CameraFrames FirstFrame(imageLeft, imageRight, leftInfo, rightInfo);
 		
 		//Set Filter Parameters and Initialize it
-		Filter.Set_nparticles(200);
+		Filter.Set_nparticles(1000);
 		Filter.Set_ParticlestoDraw(20);
 		Filter.InitializePF();
 		Filter.DrawParticles(FirstFrame);
@@ -109,19 +116,20 @@ void ImagesCallback(const sensor_msgs::ImageConstPtr& imageLeft,
 		
 		//Measurement Model
 		Filter.MeasurementModel_A(New_Frames);
-		std::cout <<"ppp" <<std::endl;
+	
 		//Resampling
 		Filter.Resampling();
 		
 		//Compute statistics
-		//Filter.Statistics();
-		std::cout <<"ooo"<<std::endl;
+		Filter.Statistics();
+	
 		//Draw Results
 		Filter.DrawParticles(New_Frames);
+		Filter.CloudParticles();
 		
 	}
 
-	//pub_PFCloud.publish(model.Get_PointCloud());//Uncoment this line for publish the cloud of the model
+	pub_PFCloud.publish(Filter.GetFilterCloud());//Uncoment this line for publish the cloud of the model
 
 }
 

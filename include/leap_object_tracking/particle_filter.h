@@ -37,7 +37,7 @@ private:
 	
 	//Gaussian distribution parameters
 	int size; // Dimensionality (rows)
-
+	pcl::PointCloud<pcl::PointXYZ> FilterCloud;
 		
 public:
 	
@@ -48,7 +48,9 @@ public:
 	//SetMethods
 	void Set_nparticles(int nparticles){ this->nparticles = nparticles;}
 	void Set_ParticlestoDraw(double M){ this->M = M;}
-
+	//Get Mehthods
+	pcl::PointCloud<pcl::PointXYZ> GetFilterCloud(){return FilterCloud;}
+	
 	//Particle Filter Steps and functions
 	void InitializePF();
 	void MotionModel();
@@ -56,7 +58,7 @@ public:
 	void Resampling();
 	void Statistics();
 	void DrawParticles(CameraFrames);
-	
+	void CloudParticles();
 	
 	Eigen::MatrixXd MultivariateGaussian(float, float, float, float, float, float,int);
 };

@@ -16,8 +16,8 @@
 
 
 Eigen::VectorXf Mean(6);
-Eigen::MatrixXf SampleMatrix(6,200);
-Eigen::MatrixXf SetOfParticles(4,200);
+Eigen::MatrixXf SampleMatrix(6,1000);
+Eigen::MatrixXf SetOfParticles(4,1000);
 double sum_w = 0;
 static bool first_time;
 namespace Eigen{
@@ -53,8 +53,8 @@ std::mt19937 gen(rd());
 void ParticleFilter::InitializePF(){
 	
 	float x_min = 0.005; 		float x_max = 0.02;
-	float y_min = -0.01; 		float y_max = 0.01;
-	float z_min = 0.02; 		float z_max = 0.05;
+	float y_min = -0.01; 		float y_max = 0.05;
+	float z_min = 0.02; 		float z_max = 0.08;
 	float alpha_min = 0;		float alpha_max = 360;
 	float beta_min = 0; 		float beta_max = 360;
 	float gamma_min = 0; 		float gamma_max = 360;
@@ -105,9 +105,9 @@ void ParticleFilter::MotionModel(){
 				FilterParticles.at(i).GetZ(),
 				FilterParticles.at(i).GetAlpha(),
 				FilterParticles.at(i).GetBeta(),
-				FilterParticles.at(i).GetGamma(),5);
+				FilterParticles.at(i).GetGamma(),10);
 
-		for(int j = 0; j < 5; j++){
+		for(int j = 0; j < 10; j++){
 	
 			p.SetX(samples(0,j)); //The X can't be negative (Means behind the camera)
 			p.SetY(samples(1,j));
@@ -198,7 +198,6 @@ void ParticleFilter::MeasurementModel_A(CameraFrames NewFrame){
 			sum_w += p_AllPoints/counter;
 		}
 
-		counter2++;
 		
 		left.clear();
 		right.clear();
@@ -207,146 +206,111 @@ void ParticleFilter::MeasurementModel_A(CameraFrames NewFrame){
 	//std::cout << "Not valid particles: " << a << "  from " << FilterParticlesWithCovariance.size() << "particles"<<std::endl;
 	
 }
-bool sortByProb(Particle a, Particle b){
-	
-	return a.GetProb() > b.GetProb();
-}
 
 
 void ParticleFilter::Resampling(){
-
+	
 	
 	float x_mean = 0; float a_mean = 0;
 	float y_mean = 0; float b_mean = 0;
 	float z_mean = 0; float g_mean = 0;
+	double sum_w = 0;
+	int q = 0;
+
+	for(int i = 0; i < FilterParticlesWithCovariance.size(); i++){
+		
+		sum_w += FilterParticlesWithCovariance.at(i).GetProb();
+		
+	}
+	for(int i = 0; i < FilterParticlesWithCovariance.size(); i++){
+		FilterParticlesWithCovariance.at(i).SetProb(FilterParticlesWithCovariance.at(i).GetProb()/sum_w);
+	}
 	
-if(first_time){
-	std::sort(FilterParticlesWithCovariance.begin(), FilterParticlesWithCovariance.end(), sortByProb);
-	first_time = true;
-}
-
-
-	double r = static_cast<double> (rand())/(static_cast<double>(RAND_MAX)/(sum_w/M));	
+	
+	double M = 20; //Number of samples to draw
+	double r = static_cast<double> (rand())/(static_cast<double>(RAND_MAX)/(1/M));	
 	int i = 0;
 	double U,c;
+	
+	
+	while(!(FilterParticlesWithCovariance.at(q).GetProb() != 0)){
+		q++;
+	}
+	c = FilterParticlesWithCovariance.at(q).GetProb();
+	
+	for(double m = 1; m < M; m++){
 
-	c = FilterParticlesWithCovariance.at(0).GetProb();
-	for(double m = 0; m < M; m++){
+		U = r + (m-1)*(1/M);
 
-/*		U = r + (m)*(sum_w/M);
-
-		while(U > c){
+		while(U > c && i < FilterParticlesWithCovariance.size() - 1){
 
 			i  = i + 1;
 			c = c + FilterParticlesWithCovariance.at(i).GetProb(); 
 
-		}*/
-		
-/*		
-				std::cout << "Particle chosen: " << i
-				<< "   with probability: " << FilterParticlesWithCovariance.at(i).GetProb()<<std::endl;*/
-			
-		 
-		//std::cout << "x: " << FilterParticlesWithCovariance.at(i).GetX() << "     y: " << FilterParticlesWithCovariance.at(i).GetX() << "     z: " << FilterParticlesWithCovariance.at(i).GetZ()<<std::endl; 
-				
-i = m;
-		FilterParticles.push_back(FilterParticlesWithCovariance.at(i));
+		}
 
+/*		std::cout << "Particle chosen: " << i
+				<< "   with probability: " << FilterParticlesWithCovariance.at(i).GetProb()<<std::endl;
+		*/
+		//std::cout << "x: " << FilterParticlesWithCovariance.at(i).GetX() << "     y: " << FilterParticlesWithCovariance.at(i).GetX() << "     z: " << FilterParticlesWithCovariance.at(i).GetZ()<<std::endl; 
+
+
+		FilterParticles.push_back(FilterParticlesWithCovariance.at(i));
+		
 		SampleMatrix(0,m)=FilterParticlesWithCovariance.at(i).GetX();
 		SampleMatrix(1,m)=FilterParticlesWithCovariance.at(i).GetY();
 		SampleMatrix(2,m)=FilterParticlesWithCovariance.at(i).GetZ();
 		SampleMatrix(3,m)=FilterParticlesWithCovariance.at(i).GetAlpha();
 		SampleMatrix(4,m)=FilterParticlesWithCovariance.at(i).GetBeta();
 		SampleMatrix(5,m)=FilterParticlesWithCovariance.at(i).GetGamma();
-
+		
 		SetOfParticles(0,m) = FilterParticlesWithCovariance.at(i).GetX();
 		SetOfParticles(1,m) = FilterParticlesWithCovariance.at(i).GetY();
 		SetOfParticles(2,m) = FilterParticlesWithCovariance.at(i).GetZ();
 		SetOfParticles(3,m) = 1;
-
+		
 		x_mean +=FilterParticlesWithCovariance.at(i).GetX();
 		y_mean +=FilterParticlesWithCovariance.at(i).GetY();
 		z_mean +=FilterParticlesWithCovariance.at(i).GetZ();
 		a_mean +=FilterParticlesWithCovariance.at(i).GetAlpha();
 		b_mean += FilterParticlesWithCovariance.at(i).GetBeta();
 		g_mean += FilterParticlesWithCovariance.at(i).GetGamma();
+		
+		
 	}	
-
-	std::cout << "=================================================" <<std::endl;
-	Mean << x_mean/M, y_mean/M, z_mean/M,a_mean/M,b_mean/M,g_mean/M;
+	//std::cout << "=================================================" <<std::endl;
+	Mean << x_mean/(M-1), y_mean/(M-1), z_mean/(M-1),a_mean/(M-1),b_mean/(M-1),g_mean/(M-1);
 
 
 	FilterParticlesWithCovariance.clear();
 
+	//Randomly generation in the limits 
 	
-	if(sum_w < 0.2){
+	float x_min = -0.1; 		float x_max = 0.1;
+	float y_min = -0.01; 		float y_max = 0.05;
+	float z_min = 0.02; 		float z_max = 0.08;
+	float alpha_min = 0;		float alpha_max = 360;
+	float beta_min = 0; 		float beta_max = 360;
+	float gamma_min = 0; 		float gamma_max = 360;
+	
+	std::uniform_real_distribution<float> dis_x(x_min, x_max);
+	std::uniform_real_distribution<float> dis_y(y_min, y_max);
+	std::uniform_real_distribution<float> dis_z(z_min, z_max);
+	std::uniform_real_distribution<float> dis_alpha(alpha_min, alpha_max);
+	std::uniform_real_distribution<float> dis_beta(beta_min, beta_max);
+	std::uniform_real_distribution<float> dis_gamma(gamma_min, gamma_max);
 
-
-		float x_min = -0.2; 		float x_max = 0.2;
-		float y_min = -0.1; 		float y_max = 0.1;
-		float z_min = 0.01; 		float z_max = 0.1;
-		float alpha_min = 0;		float alpha_max = 360;
-		float beta_min = 0; 		float beta_max = 360;
-		float gamma_min = 0; 		float gamma_max = 360;
-
-		std::uniform_real_distribution<float> dis_x(x_min, x_max);
-		std::uniform_real_distribution<float> dis_y(y_min, y_max);
-		std::uniform_real_distribution<float> dis_z(z_min, z_max);
-		std::uniform_real_distribution<float> dis_alpha(alpha_min, alpha_max);
-		std::uniform_real_distribution<float> dis_beta(beta_min, beta_max);
-		std::uniform_real_distribution<float> dis_gamma(gamma_min, gamma_max);
-
-		for(int h = M-1; h < nparticles; ++h){
-
-			Particle p(dis_x(gen), dis_y(gen), dis_z(gen), dis_alpha(gen), dis_beta(gen), dis_gamma(gen), h);
-			FilterParticles.push_back(p);
-
-			SetOfParticles(0,h) = p.GetX();
-			SetOfParticles(1,h) = p.GetY();
-			SetOfParticles(2,h) = p.GetZ();
-			SetOfParticles(3,h) = 1;
-		}
-	}else{
-		Eigen::MatrixXd samples;
-		Particle p;
+	for(int h = M; h < nparticles; ++h){
 		
-		for(int h = 0; h < M; h++){
-
-/*					std::cout << FilterParticles.at(i).GetX() << "   " << FilterParticles.at(i).GetY() << "   " << FilterParticles.at(i).GetZ() << "   " <<
-						FilterParticles.at(i).GetAlpha() << "   " << FilterParticles.at(i).GetBeta() << "   " << FilterParticles.at(i).GetGamma() << std::endl;*/
-			
-			samples = MultivariateGaussian(FilterParticles.at(h).GetX(),
-					FilterParticles.at(h).GetY(),
-					FilterParticles.at(h).GetZ(),
-					FilterParticles.at(h).GetAlpha(),
-					FilterParticles.at(h).GetBeta(),
-					FilterParticles.at(h).GetGamma(),9);
-			
-			for(int j = 0; j < 9; j++){
-				
-				p.SetX(samples(0,j)); 
-				p.SetY(samples(1,j));
-				p.SetZ(fabs(samples(2,j)));
-				p.SetAlpha(samples(3,j));
-				p.SetBeta(samples(4,j));
-				p.SetGamma(samples(5,j));
-				
-				FilterParticles.push_back(p);
-				
-				SetOfParticles(0,M+j+9*h) = p.GetX();
-				SetOfParticles(1,M+j+9*h) = p.GetY();
-				SetOfParticles(2,M+j+9*h) = p.GetZ();
-				SetOfParticles(3,M+j+9*h) = 1;						
-			}	
-
-		}
+		Particle p(dis_x(gen), dis_y(gen), dis_z(gen), dis_alpha(gen), dis_beta(gen), dis_gamma(gen), h);
+		FilterParticles.push_back(p);
 		
+		SetOfParticles(0,h) = p.GetX();
+		SetOfParticles(1,h) = p.GetY();
+		SetOfParticles(2,h) = p.GetZ();
+		SetOfParticles(3,h) = 1;
 	}
-	
-	
-
 }
-
 
 void ParticleFilter::Statistics(){
 
@@ -382,7 +346,7 @@ void ParticleFilter::DrawParticles(CameraFrames NewFrame){
 		cv::Point center_l(floor(left.at(k).x), floor(left.at(k).y));	
 		cv::Point center_r(floor(right.at(k).x), floor(right.at(k).y));
 
-		if(k < 200){
+		if(k < M){
 			a(1) = 255;
 			cv::circle(img_rgbLeft, center_l, 2, a,-1);
 			cv::circle(img_rgbRight, center_r, 2, a,-1);
@@ -402,6 +366,24 @@ void ParticleFilter::DrawParticles(CameraFrames NewFrame){
 	cv::waitKey(1);
 }
 
+void ParticleFilter::CloudParticles(){
+	
+	FilterCloud.header.frame_id = "world";
+	FilterCloud.height = 1;
+	FilterCloud.width = M;
+	FilterCloud.points.resize (FilterCloud.width * FilterCloud.height);
+	FilterCloud.is_dense = false; 
+
+	for(int i = 0; i < M ; i++){
+
+		FilterCloud.points[i].x = SetOfParticles(0,i);
+		FilterCloud.points[i].y = SetOfParticles(1,i);
+		FilterCloud.points[i].z = SetOfParticles(2,i);
+
+	}
+	
+}
+
 /*
   Draw nn samples from a size-dimensional normal distribution
   with a specified mean and covariance
@@ -417,9 +399,9 @@ Eigen::MatrixXd ParticleFilter::MultivariateGaussian(float x, float y, float z, 
 	Eigen::MatrixXd covar(size,size);
 
 	mean  <<  x, y, z, a, b, c;
-	covar <<  .0001, 0, 0, 0, 0, 0,
-			0, .0001, 0, 0, 0, 0,
-			0, 0, .0001, 0, 0, 0,
+	covar <<  .001, 0, 0, 0, 0, 0,
+			0, .001, 0, 0, 0, 0,
+			0, 0, .001, 0, 0, 0,
 			0, 0, 0, .0003, 0, 0,
 			0, 0, 0, 0, .0003, 0,
 			0, 0, 0, 0, 0, .0003;
