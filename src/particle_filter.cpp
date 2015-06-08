@@ -178,7 +178,7 @@ void ParticleFilter::MeasurementModel_A(CameraFrames NewFrame){
 			}
 		}	
 
-		if(counter != 0 && !isinf(p_AllPoints)){
+		if(counter != 0 && !isinf(p_AllPoints) &&!isnan(p_AllPoints)){
 /*					std::cout << counter<<std::endl;
 			std::cout << "prob_all: " << p_AllPoints << "  counter: " << counter << "  prob= "<< p_AllPoints/counter <<std::endl;*/
 		FilterParticlesWithCovariance.at(i).SetProb(p_AllPoints/counter);
@@ -206,7 +206,10 @@ void ParticleFilter::Resampling(){
 		sum_w += FilterParticlesWithCovariance.at(i).GetProb();
 		counter++;
 	}
-	sum_w = sum_w/counter;
+	for(int i = 0; i < FilterParticlesWithCovariance.size(); i++){
+		FilterParticlesWithCovariance.at(i).SetProb(FilterParticlesWithCovariance.at(i).GetProb()/sum_w);
+	}
+	//sum_w = sum_w/counter;
 	
 	double M = 20; //Number of samples to draw
 	double r = static_cast<double> (rand())/(static_cast<double>(RAND_MAX)/(1/M));	
@@ -219,9 +222,9 @@ void ParticleFilter::Resampling(){
 
 	for(double m = 0; m < M; m++){
 
-		U = r + (m)*(1/M);
+		U = r + (m-1)*(1/M);
 
-		while(U > c){
+		while(U > c && i < FilterParticlesWithCovariance.size() - 1){
 
 			i  = i + 1;
 			c = c + FilterParticlesWithCovariance.at(i).GetProb(); 

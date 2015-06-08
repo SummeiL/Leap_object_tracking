@@ -4,7 +4,7 @@
 	<node pkg="leap_object_tracking"
 	 type="node"
 	 name="camera_node" 
-	 output="screen"/>
+	 output="screen" launch-prefix="xterm -e gdb --args"/>
 	
 	<node pkg="stereo_image_proc"
 	 type="stereo_image_proc"

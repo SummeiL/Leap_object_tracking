@@ -31,6 +31,8 @@ private:
 	
 	std::vector<cv::Point2f> modelpoints2dleft;
 	std::vector<cv::Point2f> modelpoints2dright;
+	cv_bridge::CvImageConstPtr bridgeLeft; 
+	cv_bridge::CvImageConstPtr bridgeRight;
 
 
 public:

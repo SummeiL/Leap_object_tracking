@@ -28,8 +28,6 @@ CameraFrames::CameraFrames(const sensor_msgs::ImageConstPtr& Left,
 	leftCamInfo = LeftInfo; 
 	rightCamInfo = RightInfo;
 
-	cv_bridge::CvImageConstPtr bridgeLeft; 
-	cv_bridge::CvImageConstPtr bridgeRight;
 
 	try{
 

@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(leap_object_tracking)
 set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
-set(CMAKE_BUILD_TYPE Release)
+#set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_BUILD_TYPE Debug)
 
 find_package(catkin REQUIRED COMPONENTS roscpp rospy roslib std_msgs geometry_msgs message_generation sensor_msgs visualization_msgs camera_info_manager rospack camera_calibration_parsers cv_bridge pcl_ros message_filters image_geometry stereo_image_proc tf)
 
