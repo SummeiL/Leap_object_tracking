@@ -46,8 +46,8 @@ public:
 	~ParticleFilter(){}
 	
 	//SetMethods
-	void Set_nparticles(int nparticles){ this->nparticles = nparticles;}
-	void Set_ParticlestoDraw(double M){ this->M = M;}
+	void Set_nparticles(int nparticles_){ this->nparticles = nparticles_;}
+	void Set_ParticlestoDraw(double M_){ this->M = M_;}
 	//Get Mehthods
 	pcl::PointCloud<pcl::PointXYZ> GetFilterCloud(){return FilterCloud;}
 	

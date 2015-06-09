@@ -52,12 +52,12 @@ std::mt19937 gen(rd());
 
 void ParticleFilter::InitializePF(){
 	
-	float x_min = 0.005; 		float x_max = 0.02;
-	float y_min = -0.01; 		float y_max = 0.05;
-	float z_min = 0.02; 		float z_max = 0.08;
-	float alpha_min = 0;		float alpha_max = 360;
-	float beta_min = 0; 		float beta_max = 360;
-	float gamma_min = 0; 		float gamma_max = 360;
+	float x_min = -0.05; 		float x_max = 0.05;
+	float y_min = -0.05; 		float y_max = 0.05;
+	float z_min = 0.01; 		float z_max = 0.02;
+	float alpha_min = -M_PI/2;		float alpha_max = M_PI/2;
+	float beta_min = -M_PI/2; 		float beta_max = M_PI/2;
+	float gamma_min = -M_PI/2; 		float gamma_max = M_PI/2;
 
 	//Randomly generation in the limits
 	std::uniform_real_distribution<float> dis_x(x_min, x_max);
@@ -105,9 +105,9 @@ void ParticleFilter::MotionModel(){
 				FilterParticles.at(i).GetZ(),
 				FilterParticles.at(i).GetAlpha(),
 				FilterParticles.at(i).GetBeta(),
-				FilterParticles.at(i).GetGamma(),10);
+				FilterParticles.at(i).GetGamma(),100);
 
-		for(int j = 0; j < 10; j++){
+		for(int j = 0; j < 100; j++){
 	
 			p.SetX(samples(0,j)); //The X can't be negative (Means behind the camera)
 			p.SetY(samples(1,j));
@@ -134,12 +134,12 @@ void ParticleFilter::MeasurementModel_A(CameraFrames NewFrame){
 	std::vector<cv::Point2f> right;
 
 	double D_Left, D_Right;
-	double D_max = 279;  double D_min = 0;
+	double D_max = 5;  double D_min = 0;
 
 	double Normalizer;
 	double p_Left, p_Right;
 	double p_AllPoints;
-	double lambda = 0.05;
+	double lambda = 0.2; //0.05;
 	double a = 0;
 	double w = 0.5;
 	double counter2 = 0;
@@ -171,7 +171,7 @@ void ParticleFilter::MeasurementModel_A(CameraFrames NewFrame){
 				D_Left = (double) NewFrame.GetLeftDistanceFrame().at<float>((int)left.at(k).x, (int)left.at(k).y);
 				D_Right = (double) NewFrame.GetRightDistanceFrame().at<float>((int)right.at(k).x, (int)right.at(k).y);
 
-				if(D_Left >= 0 && D_Left <280 && D_Right >=0 && D_Right < 280){
+				if(D_Left >= 0 && D_Left <D_max && D_Right >=0 && D_Right < D_max){
 					p_Left = exp(-lambda*D_Left);
 					p_Right = exp(-lambda*D_Right);
 				}else {
@@ -180,6 +180,7 @@ void ParticleFilter::MeasurementModel_A(CameraFrames NewFrame){
 				}
 
 				p_AllPoints +=(w*p_Left + w*p_Right);
+				//p_AllPoints +=p_Left;
 
 /*													std::cout << "D_Left     D_Right      p_Left      p_Right" << std::endl;
 					std::cout << D_Left << "    " << D_Right  << "     " << p_Left  <<"   " << p_Right << std::endl;	*/
@@ -227,7 +228,7 @@ void ParticleFilter::Resampling(){
 	}
 	
 	
-	double M = 20; //Number of samples to draw
+	double M = nparticles;//20; //Number of samples to draw
 	double r = static_cast<double> (rand())/(static_cast<double>(RAND_MAX)/(1/M));	
 	int i = 0;
 	double U,c;
@@ -285,13 +286,13 @@ void ParticleFilter::Resampling(){
 	FilterParticlesWithCovariance.clear();
 
 	//Randomly generation in the limits 
-	
+#if 0	
 	float x_min = -0.1; 		float x_max = 0.1;
 	float y_min = -0.01; 		float y_max = 0.05;
 	float z_min = 0.02; 		float z_max = 0.08;
-	float alpha_min = 0;		float alpha_max = 360;
-	float beta_min = 0; 		float beta_max = 360;
-	float gamma_min = 0; 		float gamma_max = 360;
+	float alpha_min = -M_PI/2;		float alpha_max = M_PI/2;
+	float beta_min = -M_PI/2; 		float beta_max = M_PI/2;
+	float gamma_min = -M_PI/2; 		float gamma_max = M_PI/2;
 	
 	std::uniform_real_distribution<float> dis_x(x_min, x_max);
 	std::uniform_real_distribution<float> dis_y(y_min, y_max);
@@ -310,6 +311,7 @@ void ParticleFilter::Resampling(){
 		SetOfParticles(2,h) = p.GetZ();
 		SetOfParticles(3,h) = 1;
 	}
+#endif
 }
 
 void ParticleFilter::Statistics(){
@@ -336,15 +338,32 @@ void ParticleFilter::DrawParticles(CameraFrames NewFrame){
 	 cv::Mat img_rgbRight(rightFrame.size(), CV_8UC3);
 	 cv::cvtColor(leftFrame, img_rgbLeft, CV_GRAY2RGB);	 
 	 cv::cvtColor(rightFrame, img_rgbRight, CV_GRAY2RGB);
-	 
-	NewFrame.ProjectToCameraPlane(SetOfParticles);
+	
+	 //weighted average
+	 Eigen::MatrixXf wm(6,1), tmp(6,1);
+	 wm.setZero();
+	 double weightsum=0;
+	 for(int i=0; i<FilterParticles.size(); i++) {
+	    double w = FilterParticles.at(i).GetProb();
+	    weightsum+=w;
+	    tmp << w*FilterParticles.at(i).GetX(),w*FilterParticles.at(i).GetY(),w*FilterParticles.at(i).GetZ();
+	    wm+=tmp;
+	 }
+	 wm /= weightsum;
+	 Particle pwm(wm(0),wm(1),wm(2),wm(3),wm(4),wm(5),0);
+
+	//NewFrame.ProjectToCameraPlane(SetOfParticles);
+	NewFrame.ProjectToCameraPlane(model.Transform(pwm));
 	left = NewFrame.GetProjectedModelPointsLeft();
 	right = NewFrame.GetProjectedModelPointsRight();
 
 	for(int k = 0; k < left.size(); k++){
 		
-		cv::Point center_l(floor(left.at(k).x), floor(left.at(k).y));	
-		cv::Point center_r(floor(right.at(k).x), floor(right.at(k).y));
+		//cv::Point center_l(floor(left.at(k).x), floor(left.at(k).y));	
+		//cv::Point center_r(floor(right.at(k).x), floor(right.at(k).y));
+	//NOTE: axes are wrong	
+		cv::Point center_l(floor(left.at(k).y), floor(left.at(k).x));	
+		cv::Point center_r(floor(right.at(k).y), floor(right.at(k).x));
 
 		if(k < M){
 			a(1) = 255;
@@ -399,12 +418,12 @@ Eigen::MatrixXd ParticleFilter::MultivariateGaussian(float x, float y, float z, 
 	Eigen::MatrixXd covar(size,size);
 
 	mean  <<  x, y, z, a, b, c;
-	covar <<  .001, 0, 0, 0, 0, 0,
-			0, .001, 0, 0, 0, 0,
-			0, 0, .001, 0, 0, 0,
-			0, 0, 0, .0003, 0, 0,
-			0, 0, 0, 0, .0003, 0,
-			0, 0, 0, 0, 0, .0003;
+	covar <<  .1, 0, 0, 0, 0, 0,
+			0, .1, 0, 0, 0, 0,
+			0, 0, .01, 0, 0, 0,
+			0, 0, 0, .1, 0, 0,
+			0, 0, 0, 0, .1, 0,
+			0, 0, 0, 0, 0, .1;
 
 	Eigen::MatrixXd normTransform(size,size);
 

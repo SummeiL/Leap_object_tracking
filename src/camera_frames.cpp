@@ -54,6 +54,7 @@ CameraFrames::CameraFrames(const sensor_msgs::ImageConstPtr& Left,
 
 	LeftFrame = bridgeLeft->image;
 	RightFrame = bridgeRight->image;
+	
 }
 
 CameraFrames::CameraFrames(const CameraFrames &f){
@@ -137,12 +138,14 @@ void CameraFrames::EdgeDetector(){
 	//Threshold to normalize to 1/0 binary image
 	cv::threshold(LeftCannyFrame, dst_left, 254, 1, cv::THRESH_BINARY_INV);
 	cv::threshold(RightCannyFrame, dst_right, 254, 1, cv::THRESH_BINARY_INV);
-
+	
+	cv::Mat tmpleft, tmpright;
 	//Compute the distance to the closest zero pixel
-	cv::distanceTransform(dst_left, LeftDistanceFrame, CV_DIST_L2, CV_DIST_MASK_PRECISE);
-	cv::distanceTransform(dst_right, RightDistanceFrame, CV_DIST_L2, CV_DIST_MASK_PRECISE);
+	cv::distanceTransform(dst_left, tmpleft, CV_DIST_L2, CV_DIST_MASK_PRECISE);
+	cv::distanceTransform(dst_right, tmpright,  CV_DIST_L2, CV_DIST_MASK_PRECISE);
 	
-	
+	cv::normalize(tmpleft, LeftDistanceFrame, 0, 100, cv::NORM_MINMAX, CV_32FC1);
+	cv::normalize(tmpright, RightDistanceFrame, 0, 100, cv::NORM_MINMAX, CV_32FC1);
 }
 
 
@@ -180,7 +183,7 @@ void CameraFrames::ProjectToCameraPlane(Eigen::MatrixXf cloud){
 	 Baseline = 0.04 and global frame in the midle of the baseline.  */
 	
 	translation_l << 0, 0, 0, 0;
-	translation_r << 0.02, 0, 0, 0;
+	translation_r << -0.02, 0, 0, 0;
 	Point2dimensions_left = P_L*(cloud+(translation_l*u));
 	Point2dimensions_right = P_R*(cloud+(translation_r*u));
 	

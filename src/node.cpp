@@ -92,7 +92,7 @@ void ImagesCallback(const sensor_msgs::ImageConstPtr& imageLeft,
 		
 		//Set Filter Parameters and Initialize it
 		Filter.Set_nparticles(1000);
-		Filter.Set_ParticlestoDraw(20);
+		Filter.Set_ParticlestoDraw(1000);
 		Filter.InitializePF();
 		Filter.DrawParticles(FirstFrame);
 		
