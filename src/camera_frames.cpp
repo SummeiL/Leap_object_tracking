@@ -158,7 +158,10 @@ void CameraFrames::ProjectToCameraPlane(Eigen::MatrixXf cloud){
 	Eigen::MatrixXf u = Eigen::MatrixXf::Ones(1,cloud.cols());
 	Eigen::MatrixXf translation_l(4,1);
 	Eigen::MatrixXf translation_r(4,1);
-	
+	Eigen::Matrix3f rotationMatrix;
+	Eigen::MatrixXf toLeftAxis(4,cloud.cols());
+	Eigen::MatrixXf AuxMat(3,cloud.cols());
+
 	cv::Point2f aux_l(0,0);
 	cv::Point2f aux_r(0,0);
 	
@@ -182,10 +185,23 @@ void CameraFrames::ProjectToCameraPlane(Eigen::MatrixXf cloud){
 	 Translation is neccesary to put the 3D points on the corresponding camera frame.
 	 Baseline = 0.04 and global frame in the midle of the baseline.  */
 	
+	rotationMatrix =  Eigen::AngleAxisf(0, Eigen::Vector3f::UnitY())
+					* Eigen::AngleAxisf(0, Eigen::Vector3f::UnitZ())
+			 		* Eigen::AngleAxisf(-90, Eigen::Vector3f::UnitX());
+	
+
 	translation_l << 0, 0, 0, 0;
-	translation_r << -0.02, 0, 0, 0;
-	Point2dimensions_left = P_L*(cloud+(translation_l*u));
-	Point2dimensions_right = P_R*(cloud+(translation_r*u));
+	translation_r << 0.08, 0, 0, 0;
+	
+	AuxMat = rotationMatrix*cloud;
+	toLeftAxis.row(0) = AuxMat.row(0);
+	toLeftAxis.row(1) = AuxMat.row(1);
+	toLeftAxis.row(2) = AuxMat.row(2);
+	toLeftAxis.row(3).setOnes();
+	
+	
+	Point2dimensions_left = P_L*(toLeftAxis+(translation_l*u));
+	Point2dimensions_right = P_R*(toLeftAxis+(translation_r*u));
 	
 	//Divide by the Homogeneous Coordinates to get the 2D Points
 	Point2dimensions_left.row(0) = Point2dimensions_left.row(0).cwiseQuotient(Point2dimensions_left.row(2));

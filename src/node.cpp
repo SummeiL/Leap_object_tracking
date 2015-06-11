@@ -17,7 +17,7 @@
 
 #include <fstream>
 #include <time.h>
-
+#include <unistd.h>
 
 //PCL
 #include "pcl_ros/point_cloud.h"
@@ -95,7 +95,6 @@ void ImagesCallback(const sensor_msgs::ImageConstPtr& imageLeft,
 		Filter.Set_ParticlestoDraw(1000);
 		Filter.InitializePF();
 		Filter.DrawParticles(FirstFrame);
-		
 		//Change value in order to not repeat these instructions again
 		first_time = false;
 		
@@ -105,7 +104,7 @@ void ImagesCallback(const sensor_msgs::ImageConstPtr& imageLeft,
 		//Adquire frames and apply edge detector
 		CameraFrames New_Frames(imageLeft, imageRight, leftInfo, rightInfo);
 		New_Frames.EdgeDetector();
-
+		
 		//Shows edge detector output
 		New_Frames.Show_LeftDistanceFrame();
 		New_Frames.Show_RightDistanceFrame();
@@ -121,16 +120,17 @@ void ImagesCallback(const sensor_msgs::ImageConstPtr& imageLeft,
 		Filter.Resampling();
 		
 		//Compute statistics
-		Filter.Statistics();
+		//Filter.Statistics();
 	
 		//Draw Results
 		Filter.DrawParticles(New_Frames);
 		Filter.CloudParticles();
 		
+		
 	}
 
-	pub_PFCloud.publish(Filter.GetFilterCloud());//Uncoment this line for publish the cloud of the model
-
+	//pub_PFCloud.publish(Filter.GetFilterCloud());//Uncoment this line for publish the cloud of the model
+	pub_PFCloud.publish(Filter.GetFilterCloud());
 }
 
 
@@ -155,10 +155,10 @@ int main(int argc, char** argv) {
 	pub_PFCloud = nh.advertise<pcl::PointCloud<pcl::PointXYZ> >("/leap_object_tracking/PFPointCloud",1);
 
 	//Aprroximate synchronization of the images from both cameras for the callback
-	message_filters::Subscriber<sensor_msgs::Image> imageLeft_sub(nh, "/leap_object_tracking/left/image_rect",1);
-	message_filters::Subscriber<sensor_msgs::Image> imageRight_sub(nh, "/leap_object_tracking/right/image_rect",1);
-	message_filters::Subscriber<sensor_msgs::CameraInfo>infoLeft_sub(nh, "/leap_object_tracking/left/camera_info",1);
-	message_filters::Subscriber<sensor_msgs::CameraInfo>infoRight_sub(nh, "/leap_object_tracking/right/camera_info",1);
+	message_filters::Subscriber<sensor_msgs::Image> imageLeft_sub(nh, "/leap_object_tracking/left/image_rect",2);
+	message_filters::Subscriber<sensor_msgs::Image> imageRight_sub(nh, "/leap_object_tracking/right/image_rect",2);
+	message_filters::Subscriber<sensor_msgs::CameraInfo>infoLeft_sub(nh, "/leap_object_tracking/left/camera_info",2);
+	message_filters::Subscriber<sensor_msgs::CameraInfo>infoRight_sub(nh, "/leap_object_tracking/right/camera_info",2);
 
 	typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image, sensor_msgs::CameraInfo, sensor_msgs::CameraInfo> MySyncPolicy;
 

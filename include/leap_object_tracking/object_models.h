@@ -38,6 +38,7 @@ public:
 	//Methods to construct and transform the 3D objects
 	void Cube(float);
 	void Cylinder(Particle, float, float);
+	void Point();
 	void GenerateModelCloud();
 	Eigen::MatrixXf Transform(Particle);
 };

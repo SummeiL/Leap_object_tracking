@@ -47,7 +47,6 @@ Eigen::MatrixXf Models::Transform(Particle parti){
 	Eigen::MatrixXf translation(3,1);
 	Eigen::MatrixXf points(3,ModelPoints.size());
 	Eigen::MatrixXf transformation(3, ModelPoints.size());
-	Eigen::MatrixXf transformation2(4,ModelPoints.size());
 	Eigen::MatrixXf u = Eigen::MatrixXf::Ones(1,ModelPoints.size());
 
 	for(int i = 0; i < ModelPoints.size(); i++){
@@ -57,24 +56,27 @@ Eigen::MatrixXf Models::Transform(Particle parti){
 	}
 	
 	//Construction of the Rotation matrix 3x3 with the orientation of the point	
-	rotationMatrix =  Eigen::AngleAxisf(parti.GetAlpha(), Eigen::Vector3f::UnitX())
-					* Eigen::AngleAxisf(parti.GetBeta(),  Eigen::Vector3f::UnitY())
-					* Eigen::AngleAxisf(parti.GetGamma(), Eigen::Vector3f::UnitZ());
+	rotationMatrix =  Eigen::AngleAxisf(parti.GetBeta()*(180/M_PI), Eigen::Vector3f::UnitY())
+					* Eigen::AngleAxisf(parti.GetGamma()*(180/M_PI),  Eigen::Vector3f::UnitZ())
+					* Eigen::AngleAxisf(parti.GetAlpha()*(180/M_PI), Eigen::Vector3f::UnitX());
+	
+	
 	
 	//Construction of the translation vector 3x1 with the pose of the point
 	translation << parti.GetX(), parti.GetY(), parti.GetZ();
 	transformation = (rotationMatrix*points)+(translation*u);
 	
-	//Add the Homogeneous coordinate
-	transformation2.row(0) = transformation.row(0);
-	transformation2.row(1) = transformation.row(1);
-	transformation2.row(2) = transformation.row(2);
-	transformation2.row(3).setOnes();
-	
-	return transformation2;
+	return transformation;
 	
 }
-
+void Models::Point(){
+	
+	cv::Point3f aux(0,0,0);
+	
+	
+	ModelPoints.push_back(aux);
+	
+}
 
 /*
 	Functions to generate the 3D Models

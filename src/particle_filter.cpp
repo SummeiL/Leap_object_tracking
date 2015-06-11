@@ -20,6 +20,7 @@ Eigen::MatrixXf SampleMatrix(6,1000);
 Eigen::MatrixXf SetOfParticles(4,1000);
 double sum_w = 0;
 static bool first_time;
+double r = M_PI/180;
 namespace Eigen{
 namespace internal {
 template<typename Scalar> 
@@ -52,12 +53,12 @@ std::mt19937 gen(rd());
 
 void ParticleFilter::InitializePF(){
 	
-	float x_min = -0.05; 		float x_max = 0.05;
-	float y_min = -0.05; 		float y_max = 0.05;
-	float z_min = 0.01; 		float z_max = 0.02;
-	float alpha_min = -M_PI/2;		float alpha_max = M_PI/2;
-	float beta_min = -M_PI/2; 		float beta_max = M_PI/2;
-	float gamma_min = -M_PI/2; 		float gamma_max = M_PI/2;
+	float x_min = -0.025; 		float x_max = -0.026;
+	float y_min = 0.06; 		float y_max = 0.065;
+	float z_min = 0.03; 		float z_max = 0.04;
+	float alpha_min = 0.087;	float alpha_max = 0.104;
+	float beta_min = 0; 		float beta_max = 0;
+	float gamma_min = 0; 		float gamma_max = 0;
 
 	//Randomly generation in the limits
 	std::uniform_real_distribution<float> dis_x(x_min, x_max);
@@ -70,7 +71,7 @@ void ParticleFilter::InitializePF(){
 	for (int n = 0; n < nparticles; ++n){
 		
 		 Particle p(dis_x(gen), dis_y(gen), dis_z(gen), dis_alpha(gen), dis_beta(gen), dis_gamma(gen), n);
-		
+
 		FilterParticles.push_back(p);
 		
 		SetOfParticles(0,n) = p.GetX();
@@ -83,6 +84,7 @@ void ParticleFilter::InitializePF(){
 	}
 	//Generate the 3D Model
 	model.Cube(0.04);
+	//model.Point();
 	first_time = true;
 }
 
@@ -109,9 +111,9 @@ void ParticleFilter::MotionModel(){
 
 		for(int j = 0; j < 100; j++){
 	
-			p.SetX(samples(0,j)); //The X can't be negative (Means behind the camera)
+			p.SetX(samples(0,j)); 
 			p.SetY(samples(1,j));
-			p.SetZ(fabs(samples(2,j)));
+			p.SetZ(fabs(samples(2,j))); //The Z can't be negative (Means behind the camera)
 			p.SetAlpha(samples(3,j));
 			p.SetBeta(samples(4,j));
 			p.SetGamma(samples(5,j));
@@ -228,7 +230,7 @@ void ParticleFilter::Resampling(){
 	}
 	
 	
-	double M = nparticles;//20; //Number of samples to draw
+	double M = nparticles; //Number of samples to draw
 	double r = static_cast<double> (rand())/(static_cast<double>(RAND_MAX)/(1/M));	
 	int i = 0;
 	double U,c;
@@ -284,34 +286,6 @@ void ParticleFilter::Resampling(){
 
 
 	FilterParticlesWithCovariance.clear();
-
-	//Randomly generation in the limits 
-#if 0	
-	float x_min = -0.1; 		float x_max = 0.1;
-	float y_min = -0.01; 		float y_max = 0.05;
-	float z_min = 0.02; 		float z_max = 0.08;
-	float alpha_min = -M_PI/2;		float alpha_max = M_PI/2;
-	float beta_min = -M_PI/2; 		float beta_max = M_PI/2;
-	float gamma_min = -M_PI/2; 		float gamma_max = M_PI/2;
-	
-	std::uniform_real_distribution<float> dis_x(x_min, x_max);
-	std::uniform_real_distribution<float> dis_y(y_min, y_max);
-	std::uniform_real_distribution<float> dis_z(z_min, z_max);
-	std::uniform_real_distribution<float> dis_alpha(alpha_min, alpha_max);
-	std::uniform_real_distribution<float> dis_beta(beta_min, beta_max);
-	std::uniform_real_distribution<float> dis_gamma(gamma_min, gamma_max);
-
-	for(int h = M; h < nparticles; ++h){
-		
-		Particle p(dis_x(gen), dis_y(gen), dis_z(gen), dis_alpha(gen), dis_beta(gen), dis_gamma(gen), h);
-		FilterParticles.push_back(p);
-		
-		SetOfParticles(0,h) = p.GetX();
-		SetOfParticles(1,h) = p.GetY();
-		SetOfParticles(2,h) = p.GetZ();
-		SetOfParticles(3,h) = 1;
-	}
-#endif
 }
 
 void ParticleFilter::Statistics(){
@@ -329,8 +303,9 @@ void ParticleFilter::DrawParticles(CameraFrames NewFrame){
 	Eigen::MatrixXf particles(4,nparticles);
 	std::vector<cv::Point2f> left;
 	std::vector<cv::Point2f> right;
-	cv::Scalar a(0,0,0);
-
+	cv::Scalar a(0,255,0);
+	Particle pwm;
+	
 	cv::Mat leftFrame = NewFrame.GetLeftFrame();
 	cv::Mat rightFrame = NewFrame.GetRightFrame();
 	
@@ -338,7 +313,7 @@ void ParticleFilter::DrawParticles(CameraFrames NewFrame){
 	 cv::Mat img_rgbRight(rightFrame.size(), CV_8UC3);
 	 cv::cvtColor(leftFrame, img_rgbLeft, CV_GRAY2RGB);	 
 	 cv::cvtColor(rightFrame, img_rgbRight, CV_GRAY2RGB);
-	
+	 
 	 //weighted average
 	 Eigen::MatrixXf wm(6,1), tmp(6,1);
 	 wm.setZero();
@@ -346,33 +321,52 @@ void ParticleFilter::DrawParticles(CameraFrames NewFrame){
 	 for(int i=0; i<FilterParticles.size(); i++) {
 	    double w = FilterParticles.at(i).GetProb();
 	    weightsum+=w;
-	    tmp << w*FilterParticles.at(i).GetX(),w*FilterParticles.at(i).GetY(),w*FilterParticles.at(i).GetZ();
+	    tmp << w*FilterParticles.at(i).GetX(),w*FilterParticles.at(i).GetY(),w*FilterParticles.at(i).GetZ(),w*FilterParticles.at(i).GetAlpha(),w*FilterParticles.at(i).GetBeta(),w*FilterParticles.at(i).GetGamma();
 	    wm+=tmp;
 	 }
 	 wm /= weightsum;
-	 Particle pwm(wm(0),wm(1),wm(2),wm(3),wm(4),wm(5),0);
-
+	
+	 if(isnan(wm(0))){
+		wm.setZero();
+	}
+	if(wm(0)==0 && wm(1)==0 && wm(2)==0){
+		pwm.SetX(FilterParticles.at(0).GetX());
+		pwm.SetY(FilterParticles.at(0).GetY());
+		pwm.SetZ(FilterParticles.at(0).GetZ());
+		pwm.SetAlpha(FilterParticles.at(0).GetAlpha());
+		pwm.SetBeta(FilterParticles.at(0).GetBeta());
+		pwm.SetGamma(FilterParticles.at(0).GetGamma());
+	}else{
+		pwm.SetX(wm(0));
+		pwm.SetY(wm(1));
+		pwm.SetZ(wm(2));
+		pwm.SetAlpha(wm(3));
+		pwm.SetBeta(wm(4));
+		pwm.SetGamma(wm(5));	
+	}
+	 
+	
+	 //std::cout << wm(0) << "   " << wm(1) << "   " << wm(2) << "   " << wm(3) << "   "<<wm(4)<<"   "<<wm(5)<<std::endl;
+	// Particle p(-0.025,0.07,0.06,5,0,0,0);
+	
 	//NewFrame.ProjectToCameraPlane(SetOfParticles);
 	NewFrame.ProjectToCameraPlane(model.Transform(pwm));
+	//NewFrame.ProjectToCameraPlane(model.Transform(p));
+	
 	left = NewFrame.GetProjectedModelPointsLeft();
 	right = NewFrame.GetProjectedModelPointsRight();
-
+	
 	for(int k = 0; k < left.size(); k++){
 		
-		//cv::Point center_l(floor(left.at(k).x), floor(left.at(k).y));	
-		//cv::Point center_r(floor(right.at(k).x), floor(right.at(k).y));
+		cv::Point center_l(floor(left.at(k).x), floor(left.at(k).y));	
+		cv::Point center_r(floor(right.at(k).x), floor(right.at(k).y));
 	//NOTE: axes are wrong	
-		cv::Point center_l(floor(left.at(k).y), floor(left.at(k).x));	
-		cv::Point center_r(floor(right.at(k).y), floor(right.at(k).x));
+		//cv::Point center_l(floor(left.at(k).y), floor(left.at(k).x));	
+		//cv::Point center_r(floor(right.at(k).y), floor(right.at(k).x));
 
-		if(k < M){
-			a(1) = 255;
+
 			cv::circle(img_rgbLeft, center_l, 2, a,-1);
 			cv::circle(img_rgbRight, center_r, 2, a,-1);
-		}else{
-			a(1) = 0;
-			a(2) = 255;		
-		}
 
 	}
 	
@@ -392,12 +386,15 @@ void ParticleFilter::CloudParticles(){
 	FilterCloud.width = M;
 	FilterCloud.points.resize (FilterCloud.width * FilterCloud.height);
 	FilterCloud.is_dense = false; 
-
+	
+	
+	
 	for(int i = 0; i < M ; i++){
 
 		FilterCloud.points[i].x = SetOfParticles(0,i);
 		FilterCloud.points[i].y = SetOfParticles(1,i);
 		FilterCloud.points[i].z = SetOfParticles(2,i);
+		
 
 	}
 	
