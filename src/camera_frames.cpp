@@ -179,7 +179,7 @@ void CameraFrames::ProjectToCameraPlane(Eigen::MatrixXf cloud){
 	P_R(0,0) = rightCamInfo->P[0]; 	P_R(1,0) = rightCamInfo->P[4]; 	P_R(2,0) = rightCamInfo->P[8];
 	P_R(0,1) = rightCamInfo->P[1]; 	P_R(1,1) = rightCamInfo->P[5]; 	P_R(2,1) = rightCamInfo->P[9];
 	P_R(0,2) = rightCamInfo->P[2]; 	P_R(1,2) = rightCamInfo->P[6]; 	P_R(2,2) = rightCamInfo->P[10];
-	P_R(0,3) = rightCamInfo->P[3]; 	P_R(1,3) = rightCamInfo->P[7];	P_R(2,3) = rightCamInfo->P[11];
+	P_R(0,3) = 0; 	P_R(1,3) = rightCamInfo->P[7];	P_R(2,3) = rightCamInfo->P[11];
 	
 	/*Project the 3D point onto the camera planes [u v w] = ProjMat * (3DPoints+Translation).
 	 Translation is neccesary to put the 3D points on the corresponding camera frame.
@@ -189,9 +189,9 @@ void CameraFrames::ProjectToCameraPlane(Eigen::MatrixXf cloud){
 					* Eigen::AngleAxisf(0, Eigen::Vector3f::UnitZ())
 			 		* Eigen::AngleAxisf(-90, Eigen::Vector3f::UnitX());
 	
-	std::cout << P_R << std::endl;
+	
 	translation_l << 0, 0, 0, 0;
-	translation_r << 0.09, 0, 0, 0;
+	translation_r << 0.05, 0, 0, 0;
 	
 	AuxMat = rotationMatrix*cloud;
 	toLeftAxis.row(0) = AuxMat.row(0);
