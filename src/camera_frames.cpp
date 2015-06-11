@@ -189,9 +189,9 @@ void CameraFrames::ProjectToCameraPlane(Eigen::MatrixXf cloud){
 					* Eigen::AngleAxisf(0, Eigen::Vector3f::UnitZ())
 			 		* Eigen::AngleAxisf(-90, Eigen::Vector3f::UnitX());
 	
-
+	std::cout << P_R << std::endl;
 	translation_l << 0, 0, 0, 0;
-	translation_r << 0.08, 0, 0, 0;
+	translation_r << 0.09, 0, 0, 0;
 	
 	AuxMat = rotationMatrix*cloud;
 	toLeftAxis.row(0) = AuxMat.row(0);

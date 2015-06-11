@@ -57,7 +57,7 @@ Eigen::MatrixXf Models::Transform(Particle parti){
 	
 	//Construction of the Rotation matrix 3x3 with the orientation of the point	
 	rotationMatrix =  Eigen::AngleAxisf(parti.GetBeta()*(180/M_PI), Eigen::Vector3f::UnitY())
-					* Eigen::AngleAxisf(parti.GetGamma()*(180/M_PI),  Eigen::Vector3f::UnitZ())
+					* Eigen::AngleAxisf(parti.GetGamma()*(180/M_PI), Eigen::Vector3f::UnitZ())
 					* Eigen::AngleAxisf(parti.GetAlpha()*(180/M_PI), Eigen::Vector3f::UnitX());
 	
 	
@@ -69,6 +69,7 @@ Eigen::MatrixXf Models::Transform(Particle parti){
 	return transformation;
 	
 }
+
 void Models::Point(){
 	
 	cv::Point3f aux(0,0,0);

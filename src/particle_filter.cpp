@@ -70,8 +70,8 @@ void ParticleFilter::InitializePF(){
 	
 	for (int n = 0; n < nparticles; ++n){
 		
-		 Particle p(dis_x(gen), dis_y(gen), dis_z(gen), dis_alpha(gen), dis_beta(gen), dis_gamma(gen), n);
-
+		 //Particle p(dis_x(gen), dis_y(gen), dis_z(gen), dis_alpha(gen), dis_beta(gen), dis_gamma(gen), n);
+		Particle p(-0.025,0.075,0.063,5,0,0,0);
 		FilterParticles.push_back(p);
 		
 		SetOfParticles(0,n) = p.GetX();
@@ -168,23 +168,27 @@ void ParticleFilter::MeasurementModel_A(CameraFrames NewFrame){
 			if(left.at(k).x > 0 && left.at(k).x < 280 && right.at(k).x > 0 && right.at(k).x < 280
 					&& left.at(k).y > 0 && left.at(k).y < 220 && right.at(k).y > 0 && right.at(k).y < 220){
 
-				counter++;
+				
 
 				D_Left = (double) NewFrame.GetLeftDistanceFrame().at<float>((int)left.at(k).x, (int)left.at(k).y);
 				D_Right = (double) NewFrame.GetRightDistanceFrame().at<float>((int)right.at(k).x, (int)right.at(k).y);
 
-				if(D_Left >= 0 && D_Left <D_max && D_Right >=0 && D_Right < D_max){
+				if(D_Left >= 0 && D_Left < D_max && D_Right >=0 && D_Right < D_max){
+					
 					p_Left = exp(-lambda*D_Left);
 					p_Right = exp(-lambda*D_Right);
-				}else {
+					counter++;
+					
+				}else{
+					
 					p_Left = 0;
 					p_Right = 0;
+					
 				}
-
+				
 				p_AllPoints +=(w*p_Left + w*p_Right);
-				//p_AllPoints +=p_Left;
 
-/*													std::cout << "D_Left     D_Right      p_Left      p_Right" << std::endl;
+				/*													std::cout << "D_Left     D_Right      p_Left      p_Right" << std::endl;
 					std::cout << D_Left << "    " << D_Right  << "     " << p_Left  <<"   " << p_Right << std::endl;	*/
 			}
 		}	
@@ -197,17 +201,17 @@ void ParticleFilter::MeasurementModel_A(CameraFrames NewFrame){
 			//std::cout << counter<<std::endl;
 			//std::cout << "prob_all: " << p_AllPoints << "  counter: " << counter << "  prob= "<< p_AllPoints/counter <<std::endl;
 			FilterParticlesWithCovariance.at(i).SetProb(p_AllPoints/counter);
-			
+
 			sum_w += p_AllPoints/counter;
 		}
 
-		
+
 		left.clear();
 		right.clear();
 	}
-	
+
 	//std::cout << "Not valid particles: " << a << "  from " << FilterParticlesWithCovariance.size() << "particles"<<std::endl;
-	
+
 }
 
 
@@ -225,10 +229,11 @@ void ParticleFilter::Resampling(){
 		sum_w += FilterParticlesWithCovariance.at(i).GetProb();
 		
 	}
+	
 	for(int i = 0; i < FilterParticlesWithCovariance.size(); i++){
+		
 		FilterParticlesWithCovariance.at(i).SetProb(FilterParticlesWithCovariance.at(i).GetProb()/sum_w);
 	}
-	
 	
 	double M = nparticles; //Number of samples to draw
 	double r = static_cast<double> (rand())/(static_cast<double>(RAND_MAX)/(1/M));	
@@ -239,6 +244,7 @@ void ParticleFilter::Resampling(){
 	while(!(FilterParticlesWithCovariance.at(q).GetProb() != 0)){
 		q++;
 	}
+	
 	c = FilterParticlesWithCovariance.at(q).GetProb();
 	
 	for(double m = 1; m < M; m++){
@@ -305,99 +311,109 @@ void ParticleFilter::DrawParticles(CameraFrames NewFrame){
 	std::vector<cv::Point2f> right;
 	cv::Scalar a(0,255,0);
 	Particle pwm;
-	
+
 	cv::Mat leftFrame = NewFrame.GetLeftFrame();
 	cv::Mat rightFrame = NewFrame.GetRightFrame();
-	
-	 cv::Mat img_rgbLeft(leftFrame.size(), CV_8UC3);
-	 cv::Mat img_rgbRight(rightFrame.size(), CV_8UC3);
-	 cv::cvtColor(leftFrame, img_rgbLeft, CV_GRAY2RGB);	 
-	 cv::cvtColor(rightFrame, img_rgbRight, CV_GRAY2RGB);
-	 
-	 //weighted average
-	 Eigen::MatrixXf wm(6,1), tmp(6,1);
-	 wm.setZero();
-	 double weightsum=0;
-	 for(int i=0; i<FilterParticles.size(); i++) {
-	    double w = FilterParticles.at(i).GetProb();
-	    weightsum+=w;
-	    tmp << w*FilterParticles.at(i).GetX(),w*FilterParticles.at(i).GetY(),w*FilterParticles.at(i).GetZ(),w*FilterParticles.at(i).GetAlpha(),w*FilterParticles.at(i).GetBeta(),w*FilterParticles.at(i).GetGamma();
-	    wm+=tmp;
-	 }
-	 wm /= weightsum;
-	
-	 if(isnan(wm(0))){
+
+	cv::Mat img_rgbLeft(leftFrame.size(), CV_8UC3);
+	cv::Mat img_rgbRight(rightFrame.size(), CV_8UC3);
+	cv::cvtColor(leftFrame, img_rgbLeft, CV_GRAY2RGB);	 
+	cv::cvtColor(rightFrame, img_rgbRight, CV_GRAY2RGB);
+
+	//weighted average
+	Eigen::MatrixXf wm(6,1), tmp(6,1);
+	wm.setZero();
+	tmp.setZero();
+
+	double weightsum=0;
+	double w = 0;
+
+	for(int i = 0; i < FilterParticles.size(); i++) {
+
+		w = FilterParticles.at(i).GetProb();
+
+		weightsum+=w;
+		tmp << w*FilterParticles.at(i).GetX(), w*FilterParticles.at(i).GetY(),w*FilterParticles.at(i).GetZ(),
+			   w*FilterParticles.at(i).GetAlpha(), w*FilterParticles.at(i).GetBeta(), w*FilterParticles.at(i).GetGamma();
+		wm+=tmp;
+	}
+
+	wm /= weightsum;
+
+	if(isnan(wm(0))){
 		wm.setZero();
 	}
-	if(wm(0)==0 && wm(1)==0 && wm(2)==0){
+
+	if(wm(0) == 0 && wm(1) == 0 && wm (2) ==0){
+		
 		pwm.SetX(FilterParticles.at(0).GetX());
 		pwm.SetY(FilterParticles.at(0).GetY());
 		pwm.SetZ(FilterParticles.at(0).GetZ());
 		pwm.SetAlpha(FilterParticles.at(0).GetAlpha());
 		pwm.SetBeta(FilterParticles.at(0).GetBeta());
 		pwm.SetGamma(FilterParticles.at(0).GetGamma());
+		
 	}else{
+		
 		pwm.SetX(wm(0));
 		pwm.SetY(wm(1));
 		pwm.SetZ(wm(2));
 		pwm.SetAlpha(wm(3));
 		pwm.SetBeta(wm(4));
 		pwm.SetGamma(wm(5));	
+		
 	}
-	 
+
+
+	std::cout << wm(0) << "   " << wm(1) << "   " << wm(2) << "   " << wm(3) << "   "<< wm(4) <<"   "<< wm(5) <<std::endl;
 	
-	 //std::cout << wm(0) << "   " << wm(1) << "   " << wm(2) << "   " << wm(3) << "   "<<wm(4)<<"   "<<wm(5)<<std::endl;
-	// Particle p(-0.025,0.07,0.06,5,0,0,0);
-	
+	//Particle p(-0.025,0.075,0.063,5,0,0,0);
 	//NewFrame.ProjectToCameraPlane(SetOfParticles);
 	NewFrame.ProjectToCameraPlane(model.Transform(pwm));
 	//NewFrame.ProjectToCameraPlane(model.Transform(p));
-	
+
 	left = NewFrame.GetProjectedModelPointsLeft();
 	right = NewFrame.GetProjectedModelPointsRight();
-	
+
 	for(int k = 0; k < left.size(); k++){
-		
-		cv::Point center_l(floor(left.at(k).x), floor(left.at(k).y));	
+
+				cv::Point center_l(floor(left.at(k).x), floor(left.at(k).y));	
 		cv::Point center_r(floor(right.at(k).x), floor(right.at(k).y));
-	//NOTE: axes are wrong	
-		//cv::Point center_l(floor(left.at(k).y), floor(left.at(k).x));	
-		//cv::Point center_r(floor(right.at(k).y), floor(right.at(k).x));
+		//NOTE: axes are wrong	
+/*		cv::Point center_l(floor(left.at(k).y), floor(left.at(k).x));	
+		cv::Point center_r(floor(right.at(k).y), floor(right.at(k).x));*/
 
 
-			cv::circle(img_rgbLeft, center_l, 2, a,-1);
-			cv::circle(img_rgbRight, center_r, 2, a,-1);
+		cv::circle(img_rgbLeft, center_l, 2, a,-1);
+		cv::circle(img_rgbRight, center_r, 2, a,-1);
 
 	}
-	
+
 	left.clear();
 	right.clear();
 
 	cv::imshow("pointsleft", img_rgbLeft);
 	cv::imshow("pointsright", img_rgbRight);
-	
+
 	cv::waitKey(1);
 }
 
 void ParticleFilter::CloudParticles(){
-	
+
 	FilterCloud.header.frame_id = "world";
 	FilterCloud.height = 1;
 	FilterCloud.width = M;
 	FilterCloud.points.resize (FilterCloud.width * FilterCloud.height);
 	FilterCloud.is_dense = false; 
-	
-	
-	
+
+
+
 	for(int i = 0; i < M ; i++){
 
 		FilterCloud.points[i].x = SetOfParticles(0,i);
 		FilterCloud.points[i].y = SetOfParticles(1,i);
 		FilterCloud.points[i].z = SetOfParticles(2,i);
-		
-
 	}
-	
 }
 
 /*
@@ -415,9 +431,9 @@ Eigen::MatrixXd ParticleFilter::MultivariateGaussian(float x, float y, float z, 
 	Eigen::MatrixXd covar(size,size);
 
 	mean  <<  x, y, z, a, b, c;
-	covar <<  .1, 0, 0, 0, 0, 0,
-			0, .1, 0, 0, 0, 0,
-			0, 0, .01, 0, 0, 0,
+	covar <<  .05, 0, 0, 0, 0, 0,
+			0, .05, 0, 0, 0, 0,
+			0, 0, .05, 0, 0, 0,
 			0, 0, 0, .1, 0, 0,
 			0, 0, 0, 0, .1, 0,
 			0, 0, 0, 0, 0, .1;
