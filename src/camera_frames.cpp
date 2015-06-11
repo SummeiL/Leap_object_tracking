@@ -194,7 +194,7 @@ void CameraFrames::ProjectToCameraPlane(Eigen::MatrixXf cloud){
 	translation_r << 0.05, 0, 0, 0;
 	
 	AuxMat = rotationMatrix*cloud;
-	toLeftAxis.row(0) = AuxMat.row(0);
+	toLeftAxis.row(0) = -AuxMat.row(0); //The Leap is left handed
 	toLeftAxis.row(1) = AuxMat.row(1);
 	toLeftAxis.row(2) = AuxMat.row(2);
 	toLeftAxis.row(3).setOnes();
