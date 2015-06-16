@@ -22,6 +22,7 @@
 
 CameraFrames::CameraFrames(const sensor_msgs::ImageConstPtr& Left,
 						   const sensor_msgs::ImageConstPtr& Right, 
+						   const stereo_msgs::DisparityImageConstPtr& Disp, 
 						   const sensor_msgs::CameraInfoConstPtr& LeftInfo, 
 						   const sensor_msgs::CameraInfoConstPtr& RightInfo){
 
@@ -30,6 +31,7 @@ CameraFrames::CameraFrames(const sensor_msgs::ImageConstPtr& Left,
 
 	cv_bridge::CvImageConstPtr bridgeLeft; 
 	cv_bridge::CvImageConstPtr bridgeRight;
+	cv_bridge::CvImageConstPtr bridgeDisp;
 
 	try{
 
@@ -52,8 +54,17 @@ CameraFrames::CameraFrames(const sensor_msgs::ImageConstPtr& Left,
 		return;
 	}
 
+	// Update the camera model
+	model_.fromCameraInfo(LeftInfo, RightInfo);
+
+	// Calculate point cloud
+	const sensor_msgs::Image& dimage = Disp->image;
+	const cv::Mat_<float> dmat(dimage.height, dimage.width, (float*)&dimage.data[0], dimage.step);
+	model_.projectDisparityImageTo3d(dmat, DispFrame, true);
+
 	LeftFrame = bridgeLeft->image;
 	RightFrame = bridgeRight->image;
+	//DispFrame = points_mat_;
 	
 }
 
@@ -69,6 +80,7 @@ CameraFrames& CameraFrames::operator = (const CameraFrames &f){
 
 		this->LeftFrame = f.LeftFrame;
 		this->RightFrame = f.RightFrame;
+		this->DispFrame = f.DispFrame;
 		this->leftCamInfo = f.leftCamInfo;
 		this->rightCamInfo = f.rightCamInfo;
 		this->LeftDistanceFrame = f.LeftDistanceFrame;
@@ -106,6 +118,8 @@ void CameraFrames::Show_LeftDistanceFrame(){
 void CameraFrames::Show_RightDistanceFrame(){
 
 	cv::imshow("Right Distance Image",RightDistanceFrame);
+	//cv::waitKey(1);
+	cv::imshow("Disp Cam", DispFrame);
 	cv::waitKey(1);
 }
 

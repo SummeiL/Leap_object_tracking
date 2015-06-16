@@ -69,6 +69,7 @@ double getDoubleTime() {
 
 void ImagesCallback(const sensor_msgs::ImageConstPtr& imageLeft, 
 					const sensor_msgs::ImageConstPtr& imageRight, 
+					const stereo_msgs::DisparityImageConstPtr& imageDisp, 
 					const sensor_msgs::CameraInfoConstPtr& leftInfo, 
 					const sensor_msgs::CameraInfoConstPtr& rightInfo){
 
@@ -88,7 +89,7 @@ void ImagesCallback(const sensor_msgs::ImageConstPtr& imageLeft,
 	//This will be used for the first iterarion
 	if(first_time){ 
 		int a;
-		CameraFrames FirstFrame(imageLeft, imageRight, leftInfo, rightInfo);
+		CameraFrames FirstFrame(imageLeft, imageRight, imageDisp, leftInfo, rightInfo);
 		
 		//Set Filter Parameters and Initialize it
 		Filter.Set_nparticles(1000);
@@ -102,7 +103,7 @@ void ImagesCallback(const sensor_msgs::ImageConstPtr& imageLeft,
 	}else{
 		
 		//Adquire frames and apply edge detector
-		CameraFrames New_Frames(imageLeft, imageRight, leftInfo, rightInfo);
+		CameraFrames New_Frames(imageLeft, imageRight, imageDisp, leftInfo, rightInfo);
 		New_Frames.EdgeDetector();
 		
 		//Shows edge detector output
@@ -157,14 +158,15 @@ int main(int argc, char** argv) {
 	//Aprroximate synchronization of the images from both cameras for the callback
 	message_filters::Subscriber<sensor_msgs::Image> imageLeft_sub(nh, "/leap_object_tracking/left/image_rect",2);
 	message_filters::Subscriber<sensor_msgs::Image> imageRight_sub(nh, "/leap_object_tracking/right/image_rect",2);
+	message_filters::Subscriber<stereo_msgs::DisparityImage> imageDisp_sub(nh, "/leap_object_tracking/disparity",2);
 	message_filters::Subscriber<sensor_msgs::CameraInfo>infoLeft_sub(nh, "/leap_object_tracking/left/camera_info",2);
 	message_filters::Subscriber<sensor_msgs::CameraInfo>infoRight_sub(nh, "/leap_object_tracking/right/camera_info",2);
 
-	typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image, sensor_msgs::CameraInfo, sensor_msgs::CameraInfo> MySyncPolicy;
+	typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image, stereo_msgs::DisparityImage, sensor_msgs::CameraInfo, sensor_msgs::CameraInfo> MySyncPolicy;
 
-	message_filters::Synchronizer<MySyncPolicy> sync(MySyncPolicy(10), imageLeft_sub, imageRight_sub, infoLeft_sub, infoRight_sub);
+	message_filters::Synchronizer<MySyncPolicy> sync(MySyncPolicy(10), imageLeft_sub, imageRight_sub, imageDisp_sub, infoLeft_sub, infoRight_sub);
 
-	sync.registerCallback(boost::bind(&ImagesCallback, _1, _2, _3, _4));
+	sync.registerCallback(boost::bind(&ImagesCallback, _1, _2, _3, _4, _5));
 	ros::spin();
 
 	// Remove the sample listener when done

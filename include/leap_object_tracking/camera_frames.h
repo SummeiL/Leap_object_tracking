@@ -12,9 +12,11 @@
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <sensor_msgs/CameraInfo.h>
+#include <stereo_msgs/DisparityImage.h>
 #include <highgui.h>
 #include <Eigen/Eigen>
 #include <opencv2/core/eigen.hpp>
+#include <image_geometry/stereo_camera_model.h>
 
 #include <leap_object_tracking/feature_detection.h>
 
@@ -31,14 +33,17 @@ private:
 	
 	std::vector<cv::Point2f> modelpoints2dleft;
 	std::vector<cv::Point2f> modelpoints2dright;
-
+	
+	image_geometry::StereoCameraModel model_;
+	cv::Mat_<cv::Vec3f> points_mat_; // scratch buffer
 
 public:
 	
+	cv::Mat DispFrame; 
 	//Constructors, and Destructor
 	explicit CameraFrames(){}
     CameraFrames(const CameraFrames&);
-	explicit CameraFrames(const sensor_msgs::ImageConstPtr&, const sensor_msgs::ImageConstPtr&, const sensor_msgs::CameraInfoConstPtr&, const sensor_msgs::CameraInfoConstPtr&);
+	explicit CameraFrames(const sensor_msgs::ImageConstPtr&, const sensor_msgs::ImageConstPtr&, const stereo_msgs::DisparityImageConstPtr&, const sensor_msgs::CameraInfoConstPtr&, const sensor_msgs::CameraInfoConstPtr&);
 	~CameraFrames(){};
 
 	//operator

@@ -54,10 +54,10 @@ public:
 	//Particle Filter Steps and functions
 	void InitializePF();
 	void MotionModel();
-	void MeasurementModel_A(CameraFrames);
+	void MeasurementModel_A(CameraFrames &cf);
 	void Resampling();
 	void Statistics();
-	void DrawParticles(CameraFrames);
+	void DrawParticles(CameraFrames &cf);
 	void CloudParticles();
 	
 	Eigen::MatrixXd MultivariateGaussian(float, float, float, float, float, float,int);
